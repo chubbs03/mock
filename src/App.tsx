@@ -6,7 +6,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
 import { Separator } from '@/components/ui/separator'
 import { AlertTriangle, CalendarClock, HeartPulse, Activity, Stethoscope, Brain, Plus, Trash2, Search } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts'
@@ -96,12 +95,11 @@ export default function App(){
   const [selectedId, setSelectedId] = useState(patients[0].id)
   const [tasks, setTasks] = useState([{ id: 'T-101', text: 'Call P-001 to confirm fasting blood test', priority: 'High' }])
   const [chat, setChat] = useState([{ role: 'assistant', text: 'Hi! I can predict risk and suggest next actions. Select a patient to begin.' }])
-  const [whatIfGluShift, setWhatIfGluShift] = useState([0])
+  const [taskPriority, setTaskPriority] = useState('Normal')
 
   const filtered = useMemo(()=>patients.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.id.toLowerCase().includes(query.toLowerCase())), [query, patients])
   const patient = useMemo(()=>patients.find(p => p.id === selectedId)!, [patients, selectedId])
-  const adjustedVitals = useMemo(()=> patient.vitals.map((v:any)=> ({...v, glu: +(v.glu + whatIfGluShift[0]).toFixed(1)})), [patient, whatIfGluShift])
-  const risk = useMemo(()=> computeRisk({ ...patient, vitals: adjustedVitals }), [patient, adjustedVitals])
+  const risk = useMemo(()=> computeRisk(patient), [patient])
 
   function addTask(text: string, priority: string){
     setTasks(prev => [{ id: `T-${Date.now()}`, text, priority }, ...prev])
@@ -119,7 +117,8 @@ export default function App(){
       // Add a loading message
       setChat(c => [...c, { role: 'assistant', text: 'Thinking...' }])
       
-      const context = `You are a helpful medical assistant bot. Current patient: ${patient.name} (${patient.id}), Age: ${patient.age}, Conditions: ${patient.tags.join(', ')}. Current risk level: ${risk.level} (${risk.confidence}% confidence). Latest vitals - BP: ${adjustedVitals[adjustedVitals.length-1].sys}/${adjustedVitals[adjustedVitals.length-1].dia}, HR: ${adjustedVitals[adjustedVitals.length-1].hr}, Glucose: ${adjustedVitals[adjustedVitals.length-1].glu} mmol/L.`
+      const latestVitals = patient.vitals[patient.vitals.length - 1]
+      const context = `You are a helpful medical assistant bot. Current patient: ${patient.name} (${patient.id}), Age: ${patient.age}, Conditions: ${patient.tags.join(', ')}. Current risk level: ${risk.level} (${risk.confidence}% confidence). Latest vitals - BP: ${latestVitals.sys}/${latestVitals.dia}, HR: ${latestVitals.hr}, Glucose: ${latestVitals.glu} mmol/L.`
       
       const response = await client.chat.completions.create({
         model: 'deepseek-chat',
@@ -155,9 +154,8 @@ return (
         <div className="lg:col-span-12 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Brain className="h-8 w-8" />
-            <h1 className="text-2xl md:text-3xl font-semibold">Predictive AI Clinic Assistant — Mock</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold">Predictive AI Clinic Assistant</h1>
           </div>
-          <div className="text-sm text-slate-600">Demo only • No real medical advice</div>
         </div>
 
         <Card className="lg:col-span-3">
@@ -204,7 +202,7 @@ return (
                 <TabsContent value="bp" className="mt-4">
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={adjustedVitals} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
+                      <AreaChart data={patient.vitals} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
                         <defs>
                           <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="currentColor" stopOpacity={0.3}/>
@@ -224,7 +222,7 @@ return (
                 <TabsContent value="hr" className="mt-4">
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={adjustedVitals}>
+                      <LineChart data={patient.vitals}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="t" />
                         <YAxis />
@@ -237,7 +235,7 @@ return (
                 <TabsContent value="glu" className="mt-4">
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={adjustedVitals}>
+                      <LineChart data={patient.vitals}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="t" />
                         <YAxis />
@@ -277,17 +275,6 @@ return (
                   <div className="text-xs text-slate-500">(Adds to Task Queue if Medium/High)</div>
                 </div>
               </div>
-
-              <div className="rounded-2xl bg-slate-50 border p-4">
-                <div className="text-sm font-medium mb-2">What‑if analysis: adjust glucose (± mmol/L)</div>
-                <div className="flex items-center gap-3">
-                  <div className="w-full max-w-md">
-                    <Slider value={whatIfGluShift} min={-2} max={2} step={0.1} onValueChange={setWhatIfGluShift} />
-                  </div>
-                  <div className="text-sm w-16 text-right">{whatIfGluShift[0]} </div>
-                </div>
-                <div className="text-xs text-slate-500 mt-1">Risk updates live as you move the slider.</div>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -298,23 +285,26 @@ return (
               <CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5" /> Task Queue</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <Input id="taskText" placeholder="Add a task e.g. Order HbA1c" />
-                <Select defaultValue="Normal" onValueChange={(val)=>{
-                  const el = document.getElementById('taskText') as HTMLInputElement | null
-                  if (!el) return
-                  const text = el.value
-                  if (!text) return
-                  addTask(text, val)
-                  el.value = ''
-                }}>
-                  <SelectTrigger className="w-[120px]"><SelectValue placeholder="Priority"/></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Normal">Normal</SelectItem>
-                    <SelectItem value="Low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select defaultValue={taskPriority} onValueChange={setTaskPriority}>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="Priority"/></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="Normal">Normal</SelectItem>
+                      <SelectItem value="Low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={()=>{
+                    const el = document.getElementById('taskText') as HTMLInputElement | null
+                    if (!el) return
+                    const text = el.value.trim()
+                    if (!text) return
+                    addTask(text, taskPriority)
+                    el.value = ''
+                  }}><Plus className="h-4 w-4 mr-2"/>Add Task</Button>
+                </div>
               </div>
               <div className="space-y-2 max-h-[32vh] overflow-auto pr-1">
                 {tasks.map((t:any) => (
@@ -366,7 +356,7 @@ return (
         </div>
 
         <div className="lg:col-span-12 text-center text-xs text-slate-500 mt-2">
-          © 2025 Predictive AI Clinic Assistant (Mock). For academic demo only.
+          © 2025 Predictive AI Clinic Assistant
         </div>
       </div>
     </div>
