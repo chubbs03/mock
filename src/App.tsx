@@ -82,7 +82,7 @@ const MOCK_PATIENTS = [
   },
   {
     id: 'P-005',
-    name: 'Siti Nurhaliza',
+    name: 'Siti',
     age: 34,
     gender: 'F',
     tags: ['Pregnancy', 'Gestational DM'],
@@ -112,7 +112,7 @@ const MOCK_PATIENTS = [
   },
   {
     id: 'P-007',
-    name: 'Fatimah Hassan',
+    name: 'Naiemah Omar',
     age: 71,
     gender: 'F',
     tags: ['CHF', 'DM', 'CKD'],
