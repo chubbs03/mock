@@ -1,0 +1,332 @@
+import React, { useMemo, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
+import { Separator } from '@/components/ui/separator'
+import { AlertTriangle, CalendarClock, HeartPulse, Activity, Stethoscope, Brain, Plus, Trash2, Search } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts'
+
+const MOCK_PATIENTS = [
+  {
+    id: 'P-001',
+    name: 'Aisyah Binti Azman',
+    age: 42,
+    gender: 'F',
+    tags: ['DM', 'HTN'],
+    vitals: [
+      { t: 'Mon', sys: 128, dia: 84, hr: 76, glu: 7.5 },
+      { t: 'Tue', sys: 131, dia: 86, hr: 79, glu: 7.2 },
+      { t: 'Wed', sys: 135, dia: 88, hr: 83, glu: 8.1 },
+      { t: 'Thu', sys: 139, dia: 90, hr: 82, glu: 8.3 },
+      { t: 'Fri', sys: 142, dia: 92, hr: 85, glu: 8.7 },
+    ],
+    lastVisit: '2025-10-28',
+  },
+  {
+    id: 'P-002',
+    name: 'Muhammad Razif',
+    age: 58,
+    gender: 'M',
+    tags: ['Hyperlipidemia'],
+    vitals: [
+      { t: 'Mon', sys: 120, dia: 78, hr: 72, glu: 5.5 },
+      { t: 'Tue', sys: 122, dia: 79, hr: 73, glu: 5.6 },
+      { t: 'Wed', sys: 121, dia: 80, hr: 74, glu: 5.5 },
+      { t: 'Thu', sys: 124, dia: 80, hr: 74, glu: 5.6 },
+      { t: 'Fri', sys: 125, dia: 81, hr: 75, glu: 5.7 },
+    ],
+    lastVisit: '2025-10-21',
+  },
+  {
+    id: 'P-003',
+    name: 'Lim Wei Qi',
+    age: 27,
+    gender: 'F',
+    tags: ['Asthma'],
+    vitals: [
+      { t: 'Mon', sys: 114, dia: 74, hr: 80, glu: 4.9 },
+      { t: 'Tue', sys: 116, dia: 75, hr: 82, glu: 5.0 },
+      { t: 'Wed', sys: 115, dia: 74, hr: 81, glu: 5.1 },
+      { t: 'Thu', sys: 118, dia: 76, hr: 83, glu: 5.1 },
+      { t: 'Fri', sys: 117, dia: 75, hr: 80, glu: 5.0 },
+    ],
+    lastVisit: '2025-10-30',
+  },
+]
+
+const riskColor = (level: string) => ({
+  Low: 'bg-emerald-100 text-emerald-700',
+  Medium: 'bg-amber-100 text-amber-700',
+  High: 'bg-rose-100 text-rose-700',
+} as any)[level] || 'bg-slate-100 text-slate-700'
+
+function computeRisk(patient: any) {
+  const last = patient.vitals[patient.vitals.length - 1]
+  let score = 0
+  score += Math.max(0, last.sys - 130) * 0.6
+  score += Math.max(0, last.glu - 6.5) * 6
+  score += (patient.age > 50 ? 8 : 0)
+  const level = score > 20 ? 'High' : score > 10 ? 'Medium' : 'Low'
+  const confidence = Math.min(95, 60 + Math.round(score))
+  const nextStep = level === 'High'
+    ? 'Schedule urgent follow-up in 48h; order HbA1c + ABPM'
+    : level === 'Medium'
+    ? 'Book check-up in 1–2 weeks; lifestyle counselling'
+    : 'Maintain routine monitoring; no immediate action'
+  return { score: Math.round(score), level, confidence, nextStep }
+}
+
+export default function App(){
+  const [query, setQuery] = useState('')
+  const [patients, setPatients] = useState(MOCK_PATIENTS as any[])
+  const [selectedId, setSelectedId] = useState(patients[0].id)
+  const [tasks, setTasks] = useState([{ id: 'T-101', text: 'Call P-001 to confirm fasting blood test', priority: 'High' }])
+  const [chat, setChat] = useState([{ role: 'assistant', text: 'Hi! I can predict risk and suggest next actions. Select a patient to begin.' }])
+  const [whatIfGluShift, setWhatIfGluShift] = useState([0])
+
+  const filtered = useMemo(()=>patients.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.id.toLowerCase().includes(query.toLowerCase())), [query, patients])
+  const patient = useMemo(()=>patients.find(p => p.id === selectedId)!, [patients, selectedId])
+  const adjustedVitals = useMemo(()=> patient.vitals.map((v:any)=> ({...v, glu: +(v.glu + whatIfGluShift[0]).toFixed(1)})), [patient, whatIfGluShift])
+  const risk = useMemo(()=> computeRisk({ ...patient, vitals: adjustedVitals }), [patient, adjustedVitals])
+
+  function addTask(text: string, priority: string){
+    setTasks(prev => [{ id: `T-${Date.now()}`, text, priority }, ...prev])
+  }
+  function handlePredict(){
+    const msg = `Prediction for ${patient.name} (${patient.id}): Risk ${risk.level} (confidence ${risk.confidence}%). Suggested: ${risk.nextStep}.`
+    setChat(c => [...c, { role: 'assistant', text: msg }])
+    if (risk.level !== 'Low') addTask(risk.nextStep, risk.level)
+  }
+  function handleAsk(prompt?: string){
+    if (!prompt?.trim()) return
+    setChat(c => [...c, { role: 'user', text: prompt }, { role: 'assistant', text: '(Mock) Noted. I’ll include this in the plan.' }])
+  }
+
+return (
+    <div className="min-h-screen w-full bg-gradient-to-b from-sky-50 to-white p-4 md:p-8">
+      <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-12 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Brain className="h-8 w-8" />
+            <h1 className="text-2xl md:text-3xl font-semibold">Predictive AI Clinic Assistant — Mock</h1>
+          </div>
+          <div className="text-sm text-slate-600">Demo only • No real medical advice</div>
+        </div>
+
+        <Card className="lg:col-span-3">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2"><Stethoscope className="h-5 w-5" /> Patients</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2">
+             <Input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name or ID" />
+              <Button variant="secondary"><Search className="h-4 w-4" /></Button>
+            </div>
+            <div className="space-y-2 max-h-[60vh] overflow-auto pr-1">
+              {filtered.map(p => {
+                const r = computeRisk(p)
+                return (
+                  <button key={p.id} onClick={()=>setSelectedId(p.id)} className={`w-full text-left p-3 rounded-2xl border transition hover:bg-sky-50 ${selectedId===p.id?'border-sky-300 bg-sky-50':'border-slate-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium">{p.name}</div>
+                      <Badge className={riskColor(r.level)}>{r.level}</Badge>
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">{p.id} • Age {p.age} • Last visit {p.lastVisit}</div>
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                      {p.tags.map((t:string) => <Badge key={t} variant="outline" className="rounded-full">{t}</Badge>)}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="lg:col-span-6 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2"><HeartPulse className="h-5 w-5" /> {patient.name} <span className="text-sm font-normal text-slate-500">({patient.id})</span></CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Tabs defaultValue="bp">
+                <TabsList className="grid grid-cols-3 w-full">
+                  <TabsTrigger value="bp">BP</TabsTrigger>
+                  <TabsTrigger value="hr">Heart Rate</TabsTrigger>
+                  <TabsTrigger value="glu">Glucose</TabsTrigger>
+                </TabsList>
+                <TabsContent value="bp" className="mt-4">
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={adjustedVitals} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="currentColor" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="currentColor" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="t" />
+                        <YAxis />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="sys" name="Systolic" stroke="currentColor" fillOpacity={1} fill="url(#g1)" />
+                        <Line type="monotone" dataKey="dia" name="Diastolic" stroke="currentColor" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </TabsContent>
+                <TabsContent value="hr" className="mt-4">
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={adjustedVitals}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="t" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="hr" name="Heart rate" stroke="currentColor" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </TabsContent>
+                <TabsContent value="glu" className="mt-4">
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={adjustedVitals}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="t" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="glu" name="Glucose" stroke="currentColor" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-slate-50 p-4 border">
+                  <div className="text-xs text-slate-500 mb-1">Risk level</div>
+                  <div className="text-lg font-semibold flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    <span className={`px-2 py-1 rounded-full ${riskColor(risk.level)}`}>{risk.level}</span>
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4 border">
+                  <div className="text-xs text-slate-500 mb-1">Risk score</div>
+                  <div className="text-lg font-semibold">{risk.score}</div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4 border">
+                  <div className="text-xs text-slate-500 mb-1">Confidence</div>
+                  <div className="text-lg font-semibold">{risk.confidence}%</div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white border p-4">
+                <div className="text-sm text-slate-600">Suggested next step</div>
+                <div className="font-medium mt-1">{risk.nextStep}</div>
+                <div className="mt-3 flex items-center gap-3">
+                  <Button onClick={handlePredict} className="rounded-2xl"><CalendarClock className="h-4 w-4 mr-2"/>Predict & Add Task</Button>
+                  <div className="text-xs text-slate-500">(Adds to Task Queue if Medium/High)</div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 border p-4">
+                <div className="text-sm font-medium mb-2">What‑if analysis: adjust glucose (± mmol/L)</div>
+                <div className="flex items-center gap-3">
+                  <div className="w-full max-w-md">
+                    <Slider value={whatIfGluShift} min={-2} max={2} step={0.1} onValueChange={setWhatIfGluShift} />
+                  </div>
+                  <div className="text-sm w-16 text-right">{whatIfGluShift[0]} </div>
+                </div>
+                <div className="text-xs text-slate-500 mt-1">Risk updates live as you move the slider.</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-3 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5" /> Task Queue</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2">
+                <Input id="taskText" placeholder="Add a task e.g. Order HbA1c" />
+                <Select defaultValue="Normal" onValueChange={(val)=>{
+                  const el = document.getElementById('taskText') as HTMLInputElement | null
+                  if (!el) return
+                  const text = el.value
+                  if (!text) return
+                  addTask(text, val)
+                  el.value = ''
+                }}>
+                  <SelectTrigger className="w-[120px]"><SelectValue placeholder="Priority"/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Normal">Normal</SelectItem>
+                    <SelectItem value="Low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 max-h-[32vh] overflow-auto pr-1">
+                {tasks.map((t:any) => (
+                  <div key={t.id} className="flex items-center justify-between p-3 rounded-2xl border bg-white">
+                    <div>
+                      <div className="text-sm font-medium">{t.text}</div>
+                      <div className="text-xs text-slate-500">{t.id}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="rounded-full">{t.priority}</Badge>
+                      <Button size="icon" variant="ghost" onClick={()=>setTasks((ts:any[])=>ts.filter(x=>x.id!==t.id))}><Trash2 className="h-4 w-4"/></Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" /> Augment Chat (Mock)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="max-h-[32vh] overflow-auto space-y-2 pr-1">
+                {chat.map((m:any, i:number) => (
+                  <div key={i} className={`p-3 rounded-2xl border ${m.role==='assistant'?'bg-slate-50':'bg-white'}`}>
+                    <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">{m.role}</div>
+                    <div className="text-sm whitespace-pre-wrap">{m.text}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Textarea id="chatInput" placeholder="Ask the augment e.g. explain risk factors…"/>
+                <div className="flex gap-2">
+                  <Button onClick={()=>{
+                    const el = document.getElementById('chatInput') as HTMLTextAreaElement | null
+                    if (!el) return
+                    const val = el.value
+                    // @ts-ignore
+                    handleAsk(val)
+                    el.value = ''
+                  }}><Plus className="h-4 w-4 mr-2"/>Send</Button>
+                  <Button variant="secondary" onClick={handlePredict}>Quick Predict</Button>
+                </div>
+                <div className="text-[10px] text-slate-500">This is a static mock. Replace with your API later (DeepSeek, Flask, PostgreSQL/Yezza).</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-12 text-center text-xs text-slate-500 mt-2">
+          © 2025 Predictive AI Clinic Assistant (Mock). For academic demo only.
+        </div>
+      </div>
+    </div>
+  )
+}
