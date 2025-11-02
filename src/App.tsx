@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,15 @@ import { Slider } from '@/components/ui/slider'
 import { Separator } from '@/components/ui/separator'
 import { AlertTriangle, CalendarClock, HeartPulse, Activity, Stethoscope, Brain, Plus, Trash2, Search } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts'
+import OpenAI from 'openai'
+
+const DEEPSEEK_API_KEY = 'sk-34c1116b28e24ad4add008420062d489'
+
+const client = new OpenAI({
+  apiKey: DEEPSEEK_API_KEY,
+  baseURL: 'https://api.deepseek.com',
+  dangerouslyAllowBrowser: true
+})
 
 const MOCK_PATIENTS = [
   {
@@ -102,9 +111,42 @@ export default function App(){
     setChat(c => [...c, { role: 'assistant', text: msg }])
     if (risk.level !== 'Low') addTask(risk.nextStep, risk.level)
   }
-  function handleAsk(prompt?: string){
+  async function handleAsk(prompt?: string){
     if (!prompt?.trim()) return
-    setChat(c => [...c, { role: 'user', text: prompt }, { role: 'assistant', text: '(Mock) Noted. I’ll include this in the plan.' }])
+    setChat(c => [...c, { role: 'user', text: prompt }])
+    
+    try {
+      // Add a loading message
+      setChat(c => [...c, { role: 'assistant', text: 'Thinking...' }])
+      
+      const context = `You are a helpful medical assistant bot. Current patient: ${patient.name} (${patient.id}), Age: ${patient.age}, Conditions: ${patient.tags.join(', ')}. Current risk level: ${risk.level} (${risk.confidence}% confidence). Latest vitals - BP: ${adjustedVitals[adjustedVitals.length-1].sys}/${adjustedVitals[adjustedVitals.length-1].dia}, HR: ${adjustedVitals[adjustedVitals.length-1].hr}, Glucose: ${adjustedVitals[adjustedVitals.length-1].glu} mmol/L.`
+      
+      const response = await client.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: context },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+      
+      const reply = response.choices[0]?.message?.content || 'Sorry, I could not generate a response.'
+      
+      // Replace the loading message with the actual response
+      setChat(c => {
+        const newChat = [...c]
+        newChat[newChat.length - 1] = { role: 'assistant', text: reply }
+        return newChat
+      })
+    } catch (error) {
+      console.error('DeepSeek API error:', error)
+      setChat(c => {
+        const newChat = [...c]
+        newChat[newChat.length - 1] = { role: 'assistant', text: 'Sorry, there was an error connecting to the Helper Bot. Please try again.' }
+        return newChat
+      })
+    }
   }
 
 return (
@@ -293,7 +335,7 @@ return (
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" /> Augment Chat (Mock)</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" /> Helper Bot </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="max-h-[32vh] overflow-auto space-y-2 pr-1">
@@ -305,7 +347,7 @@ return (
                 ))}
               </div>
               <div className="flex flex-col gap-2">
-                <Textarea id="chatInput" placeholder="Ask the augment e.g. explain risk factors…"/>
+                <Textarea id="chatInput" placeholder="Ask the helper bot e.g. explain risk factors…"/>
                 <div className="flex gap-2">
                   <Button onClick={()=>{
                     const el = document.getElementById('chatInput') as HTMLTextAreaElement | null
@@ -317,7 +359,7 @@ return (
                   }}><Plus className="h-4 w-4 mr-2"/>Send</Button>
                   <Button variant="secondary" onClick={handlePredict}>Quick Predict</Button>
                 </div>
-                <div className="text-[10px] text-slate-500">This is a static mock. Replace with your API later (DeepSeek, Flask, PostgreSQL/Yezza).</div>
+                <div className="text-[10px] text-slate-500">Powered by DeepSeek AI. Responses are generated in real-time.</div>
               </div>
             </CardContent>
           </Card>
