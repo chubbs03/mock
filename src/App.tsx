@@ -93,16 +93,77 @@ export default function App(){
   const [query, setQuery] = useState('')
   const [patients, setPatients] = useState(MOCK_PATIENTS as any[])
   const [selectedId, setSelectedId] = useState(patients[0].id)
-  const [tasks, setTasks] = useState([{ id: 'T-101', text: 'Call P-001 to confirm fasting blood test', priority: 'High' }])
+  const [tasks, setTasks] = useState([{ id: 'T-101', text: 'Call P-001 to confirm fasting blood test', priority: 'High', department: 'Endocrinology', confidence: 0.85, auto_routed: true }])
   const [chat, setChat] = useState([{ role: 'assistant', text: 'Hi! I can predict risk and suggest next actions. Select a patient to begin.' }])
   const [taskPriority, setTaskPriority] = useState('Normal')
+  const [departmentFilter, setDepartmentFilter] = useState('All Tasks')
 
   const filtered = useMemo(()=>patients.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.id.toLowerCase().includes(query.toLowerCase())), [query, patients])
   const patient = useMemo(()=>patients.find(p => p.id === selectedId)!, [patients, selectedId])
   const risk = useMemo(()=> computeRisk(patient), [patient])
 
-  function addTask(text: string, priority: string){
-    setTasks(prev => [{ id: `T-${Date.now()}`, text, priority }, ...prev])
+  // Filter tasks by department
+  const filteredTasks = useMemo(() => {
+    if (departmentFilter === 'All Tasks') return tasks
+    if (departmentFilter === 'Needs Triage') return tasks.filter(t => !t.auto_routed)
+    return tasks.filter(t => t.department === departmentFilter)
+  }, [tasks, departmentFilter])
+
+  // Get unique departments from tasks
+  const departments = useMemo(() => {
+    const depts = new Set(tasks.map(t => t.department))
+    return Array.from(depts).sort()
+  }, [tasks])
+
+  /**
+   * Add a new task with automatic department routing.
+   *
+   * How routing works:
+   * 1. Calls Flask backend /api/route endpoint with task text
+   * 2. Backend performs two-layer classification:
+   *    a. Rule-based keyword matching (fast)
+   *    b. DeepSeek AI fallback (for ambiguous cases)
+   * 3. Returns department, confidence, and auto_routed flag
+   * 4. Task is added with routing metadata for display
+   *
+   * If routing fails, task defaults to "General" department
+   */
+  async function addTask(text: string, priority: string){
+    try {
+      // Call routing API to determine department
+      const response = await fetch('http://localhost:5001/api/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      })
+
+      const routing = await response.json()
+
+      // Create task with routing information
+      const newTask = {
+        id: `T-${Date.now()}`,
+        text,
+        priority,
+        department: routing.department || 'General',
+        confidence: routing.confidence || 0.5,
+        auto_routed: routing.auto_routed || false,
+        reason: routing.reason || 'No routing info'
+      }
+
+      setTasks(prev => [newTask, ...prev])
+    } catch (error) {
+      console.error('Routing failed:', error)
+      // Fallback: add task without routing
+      setTasks(prev => [{
+        id: `T-${Date.now()}`,
+        text,
+        priority,
+        department: 'General',
+        confidence: 0.5,
+        auto_routed: false,
+        reason: 'Routing service unavailable'
+      }, ...prev])
+    }
   }
   function handlePredict(){
     const msg = `Prediction for ${patient.name} (${patient.id}): Risk ${risk.level} (confidence ${risk.confidence}%). Suggested: ${risk.nextStep}.`
@@ -306,19 +367,70 @@ return (
                   }}><Plus className="h-4 w-4 mr-2"/>Add Task</Button>
                 </div>
               </div>
+
+              {/* Department Filter Tabs */}
+              <div className="flex gap-1 flex-wrap">
+                <Button
+                  variant={departmentFilter === 'All Tasks' ? 'default' : 'secondary'}
+                  onClick={() => setDepartmentFilter('All Tasks')}
+                  className="text-xs h-7 px-2"
+                >
+                  All ({tasks.length})
+                </Button>
+                <Button
+                  variant={departmentFilter === 'Needs Triage' ? 'default' : 'secondary'}
+                  onClick={() => setDepartmentFilter('Needs Triage')}
+                  className="text-xs h-7 px-2"
+                >
+                  Triage ({tasks.filter(t => !t.auto_routed).length})
+                </Button>
+                {departments.map(dept => (
+                  <Button
+                    key={dept}
+                    variant={departmentFilter === dept ? 'default' : 'secondary'}
+                    onClick={() => setDepartmentFilter(dept)}
+                    className="text-xs h-7 px-2"
+                  >
+                    {dept} ({tasks.filter(t => t.department === dept).length})
+                  </Button>
+                ))}
+              </div>
+
+              {/* Task List - shows filtered tasks with department chips */}
               <div className="space-y-2 max-h-[32vh] overflow-auto pr-1">
-                {tasks.map((t:any) => (
-                  <div key={t.id} className="flex items-center justify-between p-3 rounded-2xl border bg-white">
-                    <div>
+                {filteredTasks.map((t:any) => (
+                  <div key={t.id} className="flex items-start justify-between p-3 rounded-2xl border bg-white">
+                    <div className="flex-1">
                       <div className="text-sm font-medium">{t.text}</div>
-                      <div className="text-xs text-slate-500">{t.id}</div>
+                      <div className="text-xs text-slate-500 mt-1">{t.id}</div>
+                      {/* Department chip showing routing result */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge
+                          variant="outline"
+                          className={`text-xs rounded-full ${
+                            t.auto_routed
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}
+                        >
+                          {t.department} {Math.round(t.confidence * 100)}%
+                        </Badge>
+                        {!t.auto_routed && (
+                          <span className="text-xs text-amber-600">⚠ Needs Review</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 ml-2">
                       <Badge variant="outline" className="rounded-full">{t.priority}</Badge>
                       <Button size="icon" variant="ghost" onClick={()=>setTasks((ts:any[])=>ts.filter(x=>x.id!==t.id))}><Trash2 className="h-4 w-4"/></Button>
                     </div>
                   </div>
                 ))}
+                {filteredTasks.length === 0 && (
+                  <div className="text-center text-sm text-slate-400 py-4">
+                    No tasks in this category
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

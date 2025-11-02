@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Department Routing</title>
+</head>
+<body>
+    <h1>Department Routing Test</h1>
+    <input type="text" id="taskText" placeholder="Enter task text" style="width: 400px; padding: 8px;">
+    <button onclick="testRoute()">Test Route</button>
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+        async function testRoute() {
+            const text = document.getElementById('taskText').value;
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/route', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <strong>Department:</strong> ${data.department}<br>
+                    <strong>Confidence:</strong> ${Math.round(data.confidence * 100)}%<br>
+                    <strong>Auto-routed:</strong> ${data.auto_routed}<br>
+                    <strong>Reason:</strong> ${data.reason}<br>
+                    <strong>Method:</strong> ${data.method}
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
+
