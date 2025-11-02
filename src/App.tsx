@@ -27,11 +27,11 @@ const MOCK_PATIENTS = [
     gender: 'F',
     tags: ['DM', 'HTN'],
     vitals: [
-      { t: 'Mon', sys: 128, dia: 84, hr: 76, glu: 7.5 },
-      { t: 'Tue', sys: 131, dia: 86, hr: 79, glu: 7.2 },
-      { t: 'Wed', sys: 135, dia: 88, hr: 83, glu: 8.1 },
-      { t: 'Thu', sys: 139, dia: 90, hr: 82, glu: 8.3 },
-      { t: 'Fri', sys: 142, dia: 92, hr: 85, glu: 8.7 },
+      { t: 'Mon', sys: 128, dia: 84, hr: 76, glu: 7.5, spo2: 97 },
+      { t: 'Tue', sys: 131, dia: 86, hr: 79, glu: 7.2, spo2: 96 },
+      { t: 'Wed', sys: 135, dia: 88, hr: 83, glu: 8.1, spo2: 97 },
+      { t: 'Thu', sys: 139, dia: 90, hr: 82, glu: 8.3, spo2: 96 },
+      { t: 'Fri', sys: 142, dia: 92, hr: 85, glu: 8.7, spo2: 95 },
     ],
     lastVisit: '2025-10-28',
   },
@@ -42,11 +42,11 @@ const MOCK_PATIENTS = [
     gender: 'M',
     tags: ['Hyperlipidemia'],
     vitals: [
-      { t: 'Mon', sys: 120, dia: 78, hr: 72, glu: 5.5 },
-      { t: 'Tue', sys: 122, dia: 79, hr: 73, glu: 5.6 },
-      { t: 'Wed', sys: 121, dia: 80, hr: 74, glu: 5.5 },
-      { t: 'Thu', sys: 124, dia: 80, hr: 74, glu: 5.6 },
-      { t: 'Fri', sys: 125, dia: 81, hr: 75, glu: 5.7 },
+      { t: 'Mon', sys: 120, dia: 78, hr: 72, glu: 5.5, spo2: 98 },
+      { t: 'Tue', sys: 122, dia: 79, hr: 73, glu: 5.6, spo2: 98 },
+      { t: 'Wed', sys: 121, dia: 80, hr: 74, glu: 5.5, spo2: 97 },
+      { t: 'Thu', sys: 124, dia: 80, hr: 74, glu: 5.6, spo2: 98 },
+      { t: 'Fri', sys: 125, dia: 81, hr: 75, glu: 5.7, spo2: 97 },
     ],
     lastVisit: '2025-10-21',
   },
@@ -57,13 +57,73 @@ const MOCK_PATIENTS = [
     gender: 'F',
     tags: ['Asthma'],
     vitals: [
-      { t: 'Mon', sys: 114, dia: 74, hr: 80, glu: 4.9 },
-      { t: 'Tue', sys: 116, dia: 75, hr: 82, glu: 5.0 },
-      { t: 'Wed', sys: 115, dia: 74, hr: 81, glu: 5.1 },
-      { t: 'Thu', sys: 118, dia: 76, hr: 83, glu: 5.1 },
-      { t: 'Fri', sys: 117, dia: 75, hr: 80, glu: 5.0 },
+      { t: 'Mon', sys: 114, dia: 74, hr: 80, glu: 4.9, spo2: 94 },
+      { t: 'Tue', sys: 116, dia: 75, hr: 82, glu: 5.0, spo2: 93 },
+      { t: 'Wed', sys: 115, dia: 74, hr: 81, glu: 5.1, spo2: 95 },
+      { t: 'Thu', sys: 118, dia: 76, hr: 83, glu: 5.1, spo2: 94 },
+      { t: 'Fri', sys: 117, dia: 75, hr: 80, glu: 5.0, spo2: 96 },
     ],
     lastVisit: '2025-10-30',
+  },
+  {
+    id: 'P-004',
+    name: 'Rajesh Kumar',
+    age: 65,
+    gender: 'M',
+    tags: ['COPD', 'HTN', 'Ex-smoker'],
+    vitals: [
+      { t: 'Mon', sys: 145, dia: 95, hr: 88, glu: 6.2, spo2: 89 },
+      { t: 'Tue', sys: 148, dia: 96, hr: 90, glu: 6.3, spo2: 88 },
+      { t: 'Wed', sys: 150, dia: 98, hr: 92, glu: 6.5, spo2: 87 },
+      { t: 'Thu', sys: 152, dia: 99, hr: 91, glu: 6.4, spo2: 88 },
+      { t: 'Fri', sys: 154, dia: 100, hr: 93, glu: 6.6, spo2: 86 },
+    ],
+    lastVisit: '2025-10-29',
+  },
+  {
+    id: 'P-005',
+    name: 'Siti Nurhaliza',
+    age: 34,
+    gender: 'F',
+    tags: ['Pregnancy', 'Gestational DM'],
+    vitals: [
+      { t: 'Mon', sys: 118, dia: 76, hr: 78, glu: 6.8, spo2: 98 },
+      { t: 'Tue', sys: 120, dia: 78, hr: 80, glu: 7.1, spo2: 98 },
+      { t: 'Wed', sys: 122, dia: 79, hr: 82, glu: 7.3, spo2: 97 },
+      { t: 'Thu', sys: 124, dia: 80, hr: 84, glu: 7.5, spo2: 98 },
+      { t: 'Fri', sys: 126, dia: 82, hr: 86, glu: 7.8, spo2: 97 },
+    ],
+    lastVisit: '2025-10-31',
+  },
+  {
+    id: 'P-006',
+    name: 'Chen Jia Wei',
+    age: 19,
+    gender: 'M',
+    tags: ['Athlete', 'Sports Physical'],
+    vitals: [
+      { t: 'Mon', sys: 108, dia: 68, hr: 58, glu: 4.8, spo2: 99 },
+      { t: 'Tue', sys: 110, dia: 70, hr: 60, glu: 4.9, spo2: 99 },
+      { t: 'Wed', sys: 109, dia: 69, hr: 59, glu: 4.7, spo2: 100 },
+      { t: 'Thu', sys: 112, dia: 71, hr: 61, glu: 5.0, spo2: 99 },
+      { t: 'Fri', sys: 111, dia: 70, hr: 60, glu: 4.8, spo2: 99 },
+    ],
+    lastVisit: '2025-10-25',
+  },
+  {
+    id: 'P-007',
+    name: 'Fatimah Hassan',
+    age: 71,
+    gender: 'F',
+    tags: ['CHF', 'DM', 'CKD'],
+    vitals: [
+      { t: 'Mon', sys: 156, dia: 102, hr: 95, glu: 9.2, spo2: 91 },
+      { t: 'Tue', sys: 158, dia: 104, hr: 97, glu: 9.5, spo2: 90 },
+      { t: 'Wed', sys: 162, dia: 106, hr: 99, glu: 9.8, spo2: 89 },
+      { t: 'Thu', sys: 165, dia: 108, hr: 101, glu: 10.1, spo2: 88 },
+      { t: 'Fri', sys: 168, dia: 110, hr: 103, glu: 10.5, spo2: 87 },
+    ],
+    lastVisit: '2025-11-01',
   },
 ]
 
@@ -78,6 +138,7 @@ function computeRisk(patient: any) {
   let score = 0
   score += Math.max(0, last.sys - 130) * 0.6
   score += Math.max(0, last.glu - 6.5) * 6
+  score += Math.max(0, 95 - last.spo2) * 3  // Low oxygen saturation increases risk
   score += (patient.age > 50 ? 8 : 0)
   const level = score > 20 ? 'High' : score > 10 ? 'Medium' : 'Low'
   const confidence = Math.min(95, 60 + Math.round(score))
@@ -93,77 +154,24 @@ export default function App(){
   const [query, setQuery] = useState('')
   const [patients, setPatients] = useState(MOCK_PATIENTS as any[])
   const [selectedId, setSelectedId] = useState(patients[0].id)
-  const [tasks, setTasks] = useState([{ id: 'T-101', text: 'Call P-001 to confirm fasting blood test', priority: 'High', department: 'Endocrinology', confidence: 0.85, auto_routed: true }])
+  const [tasks, setTasks] = useState([{ id: 'T-101', text: 'Call P-001 to confirm fasting blood test', priority: 'High' }])
   const [chat, setChat] = useState([{ role: 'assistant', text: 'Hi! I can predict risk and suggest next actions. Select a patient to begin.' }])
   const [taskPriority, setTaskPriority] = useState('Normal')
-  const [departmentFilter, setDepartmentFilter] = useState('All Tasks')
 
   const filtered = useMemo(()=>patients.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.id.toLowerCase().includes(query.toLowerCase())), [query, patients])
   const patient = useMemo(()=>patients.find(p => p.id === selectedId)!, [patients, selectedId])
   const risk = useMemo(()=> computeRisk(patient), [patient])
 
-  // Filter tasks by department
-  const filteredTasks = useMemo(() => {
-    if (departmentFilter === 'All Tasks') return tasks
-    if (departmentFilter === 'Needs Triage') return tasks.filter(t => !t.auto_routed)
-    return tasks.filter(t => t.department === departmentFilter)
-  }, [tasks, departmentFilter])
-
-  // Get unique departments from tasks
-  const departments = useMemo(() => {
-    const depts = new Set(tasks.map(t => t.department))
-    return Array.from(depts).sort()
-  }, [tasks])
-
   /**
-   * Add a new task with automatic department routing.
-   *
-   * How routing works:
-   * 1. Calls Flask backend /api/route endpoint with task text
-   * 2. Backend performs two-layer classification:
-   *    a. Rule-based keyword matching (fast)
-   *    b. DeepSeek AI fallback (for ambiguous cases)
-   * 3. Returns department, confidence, and auto_routed flag
-   * 4. Task is added with routing metadata for display
-   *
-   * If routing fails, task defaults to "General" department
+   * Add a new task - simplified without department routing
    */
-  async function addTask(text: string, priority: string){
-    try {
-      // Call routing API to determine department
-      const response = await fetch('http://localhost:5001/api/route', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      })
-
-      const routing = await response.json()
-
-      // Create task with routing information
-      const newTask = {
-        id: `T-${Date.now()}`,
-        text,
-        priority,
-        department: routing.department || 'General',
-        confidence: routing.confidence || 0.5,
-        auto_routed: routing.auto_routed || false,
-        reason: routing.reason || 'No routing info'
-      }
-
-      setTasks(prev => [newTask, ...prev])
-    } catch (error) {
-      console.error('Routing failed:', error)
-      // Fallback: add task without routing
-      setTasks(prev => [{
-        id: `T-${Date.now()}`,
-        text,
-        priority,
-        department: 'General',
-        confidence: 0.5,
-        auto_routed: false,
-        reason: 'Routing service unavailable'
-      }, ...prev])
+  function addTask(text: string, priority: string){
+    const newTask = {
+      id: `T-${Date.now()}`,
+      text,
+      priority
     }
+    setTasks(prev => [newTask, ...prev])
   }
   function handlePredict(){
     const msg = `Prediction for ${patient.name} (${patient.id}): Risk ${risk.level} (confidence ${risk.confidence}%). Suggested: ${risk.nextStep}.`
@@ -179,7 +187,7 @@ export default function App(){
       setChat(c => [...c, { role: 'assistant', text: 'Thinking...' }])
       
       const latestVitals = patient.vitals[patient.vitals.length - 1]
-      const context = `You are a helpful medical assistant bot. Current patient: ${patient.name} (${patient.id}), Age: ${patient.age}, Conditions: ${patient.tags.join(', ')}. Current risk level: ${risk.level} (${risk.confidence}% confidence). Latest vitals - BP: ${latestVitals.sys}/${latestVitals.dia}, HR: ${latestVitals.hr}, Glucose: ${latestVitals.glu} mmol/L.`
+      const context = `You are a helpful medical assistant bot. Current patient: ${patient.name} (${patient.id}), Age: ${patient.age}, Conditions: ${patient.tags.join(', ')}. Current risk level: ${risk.level} (${risk.confidence}% confidence). Latest vitals - BP: ${latestVitals.sys}/${latestVitals.dia}, HR: ${latestVitals.hr}, Glucose: ${latestVitals.glu} mmol/L, SpO2: ${latestVitals.spo2}%.`
       
       const response = await client.chat.completions.create({
         model: 'deepseek-chat',
@@ -255,10 +263,11 @@ return (
             </CardHeader>
             <CardContent className="space-y-4">
               <Tabs defaultValue="bp">
-                <TabsList className="grid grid-cols-3 w-full">
+                <TabsList className="grid grid-cols-4 w-full">
                   <TabsTrigger value="bp">BP</TabsTrigger>
                   <TabsTrigger value="hr">Heart Rate</TabsTrigger>
                   <TabsTrigger value="glu">Glucose</TabsTrigger>
+                  <TabsTrigger value="spo2">SpO2</TabsTrigger>
                 </TabsList>
                 <TabsContent value="bp" className="mt-4">
                   <div className="h-48">
@@ -302,6 +311,19 @@ return (
                         <YAxis />
                         <Tooltip />
                         <Line type="monotone" dataKey="glu" name="Glucose" stroke="currentColor" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </TabsContent>
+                <TabsContent value="spo2" className="mt-4">
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={patient.vitals}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="t" />
+                        <YAxis domain={[80, 100]} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="spo2" name="SpO2 %" stroke="currentColor" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -368,57 +390,13 @@ return (
                 </div>
               </div>
 
-              {/* Department Filter Tabs */}
-              <div className="flex gap-1 flex-wrap">
-                <Button
-                  variant={departmentFilter === 'All Tasks' ? 'default' : 'secondary'}
-                  onClick={() => setDepartmentFilter('All Tasks')}
-                  className="text-xs h-7 px-2"
-                >
-                  All ({tasks.length})
-                </Button>
-                <Button
-                  variant={departmentFilter === 'Needs Triage' ? 'default' : 'secondary'}
-                  onClick={() => setDepartmentFilter('Needs Triage')}
-                  className="text-xs h-7 px-2"
-                >
-                  Triage ({tasks.filter(t => !t.auto_routed).length})
-                </Button>
-                {departments.map(dept => (
-                  <Button
-                    key={dept}
-                    variant={departmentFilter === dept ? 'default' : 'secondary'}
-                    onClick={() => setDepartmentFilter(dept)}
-                    className="text-xs h-7 px-2"
-                  >
-                    {dept} ({tasks.filter(t => t.department === dept).length})
-                  </Button>
-                ))}
-              </div>
-
-              {/* Task List - shows filtered tasks with department chips */}
+              {/* Task List */}
               <div className="space-y-2 max-h-[32vh] overflow-auto pr-1">
-                {filteredTasks.map((t:any) => (
+                {tasks.map((t:any) => (
                   <div key={t.id} className="flex items-start justify-between p-3 rounded-2xl border bg-white">
                     <div className="flex-1">
                       <div className="text-sm font-medium">{t.text}</div>
                       <div className="text-xs text-slate-500 mt-1">{t.id}</div>
-                      {/* Department chip showing routing result */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <Badge
-                          variant="outline"
-                          className={`text-xs rounded-full ${
-                            t.auto_routed
-                              ? 'bg-green-50 text-green-700 border-green-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
-                        >
-                          {t.department} {Math.round(t.confidence * 100)}%
-                        </Badge>
-                        {!t.auto_routed && (
-                          <span className="text-xs text-amber-600">⚠ Needs Review</span>
-                        )}
-                      </div>
                     </div>
                     <div className="flex items-center gap-2 ml-2">
                       <Badge variant="outline" className="rounded-full">{t.priority}</Badge>
@@ -426,9 +404,9 @@ return (
                     </div>
                   </div>
                 ))}
-                {filteredTasks.length === 0 && (
+                {tasks.length === 0 && (
                   <div className="text-center text-sm text-slate-400 py-4">
-                    No tasks in this category
+                    No tasks yet
                   </div>
                 )}
               </div>
