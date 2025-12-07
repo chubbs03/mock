@@ -46,10 +46,12 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python app.py
+python3 app.py
 ```
 
-Backend will start on `http://localhost:5000`
+Backend will start on `http://localhost:5001`
+
+**Note:** Port 5001 is used instead of 5000 to avoid conflicts with macOS AirPlay Receiver.
 
 ### 2. Start the Frontend
 
@@ -277,11 +279,11 @@ DEPARTMENT_RULES = {
 cd backend
 source venv/bin/activate
 pip install -r requirements.txt
-python app.py
+python3 app.py
 ```
 
 ### Frontend can't connect
-1. Ensure backend is running on port 5000
+1. Ensure backend is running on port 5001
 2. Check browser console (F12) for errors
 3. Verify CORS is enabled in backend
 
