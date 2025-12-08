@@ -3857,17 +3857,46 @@ const riskColor = (level: string) => ({
 
 function computeRisk(patient: any) {
   const last = patient.vitals[patient.vitals.length - 1]
+
+  // Use ML model prediction if available
+  if (patient.mlPrediction) {
+    const mlRisk = patient.mlPrediction
+    return {
+      score: Math.round(mlRisk.confidence),
+      level: mlRisk.risk_level,
+      confidence: Math.round(mlRisk.confidence),
+      nextStep: mlRisk.predicted_status === 'NED'
+        ? 'Continue current treatment plan; routine monitoring'
+        : mlRisk.predicted_status === 'AWD'
+        ? 'Intensify monitoring; consider treatment adjustment'
+        : 'Urgent oncology consultation; comprehensive care plan',
+      mlStatus: mlRisk.predicted_status,
+      mlProbabilities: mlRisk.probabilities
+    }
+  }
+
+  // Fallback to rule-based calculation
   let score = 0
   score += Math.max(0, last.sys - 130) * 0.6
   score += Math.max(0, last.glu - 6.5) * 6
   score += Math.max(0, 95 - last.spo2) * 3  // Low oxygen saturation increases risk
   score += (patient.age > 50 ? 8 : 0)
-  const level = score > 20 ? 'High' : score > 10 ? 'Medium' : 'Low'
-  const confidence = Math.min(95, 60 + Math.round(score))
+
+  // Add diagnosis-based risk
+  if (patient.diagnosis) {
+    if (patient.diagnosis.grade === 'High') score += 15
+    else if (patient.diagnosis.grade === 'Intermediate') score += 8
+
+    if (patient.diagnosis.status === 'D') score += 30
+    else if (patient.diagnosis.status === 'AWD') score += 20
+  }
+
+  const level = score > 30 ? 'High' : score > 15 ? 'Medium' : 'Low'
+  const confidence = Math.min(95, 60 + Math.round(score * 0.5))
   const nextStep = level === 'High'
-    ? 'Schedule urgent follow-up in 48h; order HbA1c + ABPM'
+    ? 'Schedule urgent follow-up in 48h; order comprehensive tests'
     : level === 'Medium'
-    ? 'Book check-up in 1–2 weeks; lifestyle counselling'
+    ? 'Book check-up in 1–2 weeks; monitor closely'
     : 'Maintain routine monitoring; no immediate action'
   return { score: Math.round(score), level, confidence, nextStep }
 }
@@ -3878,6 +3907,8 @@ export default function App(){
   const [selectedId, setSelectedId] = useState(patients[0].id)
   const [tasks, setTasks] = useState([{ id: 'T-101', text: 'Call P-001 to confirm fasting blood test', priority: 'High' }])
   const [chat, setChat] = useState([{ role: 'assistant', text: 'Hi! I can predict risk and suggest next actions. Select a patient to begin.' }])
+  const [mlEnabled, setMlEnabled] = useState(false)
+  const [mlLoading, setMlLoading] = useState(false)
   const [taskPriority, setTaskPriority] = useState('Normal')
 
   const filtered = useMemo(()=>patients.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.id.toLowerCase().includes(query.toLowerCase())), [query, patients])
@@ -3895,6 +3926,45 @@ export default function App(){
     }
     setTasks(prev => [newTask, ...prev])
   }
+  async function fetchMLPrediction(){
+    setMlLoading(true)
+    try {
+      const response = await fetch('http://localhost:5002/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          age: patient.age,
+          gender: patient.gender,
+          grade: patient.diagnosis?.grade || 'Intermediate',
+          tumor_size: 5,
+          depth: 'Deep',
+          tumor_site: patient.diagnosis?.tumor_site || 'Unknown',
+          histological_type: patient.diagnosis?.histological_type || 'Unknown',
+          mskcc_type: patient.diagnosis?.mskcc_type || 'Unknown',
+          treatment: patient.diagnosis?.treatment || 'Surgery'
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        // Update patient with ML prediction
+        const updatedPatients = patients.map(p =>
+          p.id === patient.id ? { ...p, mlPrediction: data.prediction } : p
+        )
+        setPatients(updatedPatients)
+        setMlEnabled(true)
+
+        const mlMsg = `ML Prediction: ${data.prediction.predicted_status} (${data.prediction.confidence.toFixed(1)}% confidence). Risk Level: ${data.prediction.risk_level}. Probabilities - NED: ${(data.prediction.probabilities.NED * 100).toFixed(1)}%, AWD: ${(data.prediction.probabilities.AWD * 100).toFixed(1)}%, Deceased: ${(data.prediction.probabilities.D * 100).toFixed(1)}%`
+        setChat(c => [...c, { role: 'assistant', text: mlMsg }])
+      }
+    } catch (error) {
+      console.error('ML API error:', error)
+      setChat(c => [...c, { role: 'assistant', text: 'ML prediction service is not available. Using rule-based prediction.' }])
+    } finally {
+      setMlLoading(false)
+    }
+  }
+
   function handlePredict(){
     const msg = `Prediction for ${patient.name} (${patient.id}): Risk ${risk.level} (confidence ${risk.confidence}%). Suggested: ${risk.nextStep}.`
     setChat(c => [...c, { role: 'assistant', text: msg }])
@@ -4076,9 +4146,23 @@ return (
               <div className="rounded-2xl bg-white border p-4">
                 <div className="text-sm text-slate-600">Suggested next step</div>
                 <div className="font-medium mt-1">{risk.nextStep}</div>
-                <div className="mt-3 flex items-center gap-3">
+                {risk.mlStatus && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-xs font-medium text-blue-700">ML Prediction: {risk.mlStatus}</div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      NED: {((risk.mlProbabilities?.NED || 0) * 100).toFixed(1)}% |
+                      AWD: {((risk.mlProbabilities?.AWD || 0) * 100).toFixed(1)}% |
+                      D: {((risk.mlProbabilities?.D || 0) * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                )}
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <Button onClick={handlePredict} className="rounded-2xl"><CalendarClock className="h-4 w-4 mr-2"/>Predict & Add Task</Button>
-                  <div className="text-xs text-slate-500">(Adds to Task Queue if Medium/High)</div>
+                  <Button onClick={fetchMLPrediction} variant="secondary" className="rounded-2xl" disabled={mlLoading}>
+                    <Brain className="h-4 w-4 mr-2"/>
+                    {mlLoading ? 'Loading...' : 'ML Predict'}
+                  </Button>
+                  <div className="text-xs text-slate-500 w-full">(ML uses trained Random Forest model)</div>
                 </div>
               </div>
             </CardContent>

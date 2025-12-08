@@ -1,0 +1,33 @@
+{
+  "model_type": "Random Forest",
+  "accuracy": 1.0,
+  "features": [
+    "age",
+    "tumor_size",
+    "sex_encoded",
+    "grade_encoded",
+    "depth_encoded",
+    "site_encoded",
+    "histological_type_encoded",
+    "mskcc_type_encoded",
+    "treatment_encoded"
+  ],
+  "target_classes": [
+    "AWD",
+    "D",
+    "NED"
+  ],
+  "training_samples": 48,
+  "test_samples": 12,
+  "feature_importance": {
+    "age": 0.16172050387665687,
+    "tumor_size": 0.0,
+    "sex_encoded": 0.2182922080938942,
+    "grade_encoded": 0.05171862692923453,
+    "depth_encoded": 0.0,
+    "site_encoded": 0.11456682480275654,
+    "histological_type_encoded": 0.09199985831111,
+    "mskcc_type_encoded": 0.13506900021417823,
+    "treatment_encoded": 0.22663297777216967
+  }
+}
