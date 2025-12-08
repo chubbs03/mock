@@ -27,50 +27,87 @@ with open('model_metadata.json', 'r') as f:
 print(f"✅ Loaded {metadata['model_type']} model (Accuracy: {metadata['accuracy']:.2%})")
 
 def predict_patient_risk(patient_data):
-    """Predict risk for a patient"""
-    
+    """Predict risk for a patient - FIXED to handle data properly"""
+
+    # Normalize grade values (handle typos like "intermedaite")
+    grade = patient_data.get('grade', 'Intermediate')
+    if grade.lower() in ['intermedaite', 'intermediate']:
+        grade = 'Intermediate'
+    elif grade.lower() == 'high':
+        grade = 'High'
+    elif grade.lower() == 'low':
+        grade = 'Low'
+
+    # Map gender to sex
+    sex = patient_data.get('sex', patient_data.get('gender', 'Female'))
+    if sex in ['M', 'Male']:
+        sex = 'Male'
+    else:
+        sex = 'Female'
+
+    # Normalize treatment
+    treatment = patient_data.get('treatment', 'Surgery')
+    # Map common treatment patterns
+    if 'radiotherapy' in treatment.lower() and 'surgery' in treatment.lower() and 'chemotherapy' in treatment.lower():
+        treatment = 'Radiotherapy + Surgery + Chemotherapy'
+    elif 'radiotherapy' in treatment.lower() and 'surgery' in treatment.lower():
+        treatment = 'Radiotherapy + Surgery'
+    elif 'surgery' in treatment.lower() and 'chemotherapy' in treatment.lower():
+        treatment = 'Surgery + Chemotherapy'
+
     # Encode categorical features
     encoded_features = []
-    
-    # Add numerical features
+
+    # Add numerical features (age, tumor_size)
     encoded_features.append(patient_data.get('age', 50))
     encoded_features.append(patient_data.get('tumor_size', 5))
-    
-    # Encode categorical features
+
+    # Encode categorical features in the correct order
     categorical_features = ['sex', 'grade', 'depth', 'site', 'histological_type', 'mskcc_type', 'treatment']
-    
+    feature_values = {
+        'sex': sex,
+        'grade': grade,
+        'depth': patient_data.get('depth', 'Deep'),
+        'site': patient_data.get('tumor_site', patient_data.get('site', 'Unknown')),
+        'histological_type': patient_data.get('histological_type', 'Unknown'),
+        'mskcc_type': patient_data.get('mskcc_type', 'Unknown'),
+        'treatment': treatment
+    }
+
     for feature in categorical_features:
-        value = patient_data.get(feature, 'Unknown')
+        value = feature_values[feature]
         encoder = label_encoders[feature]
-        
+
         # Handle unknown values
         try:
             encoded_value = encoder.transform([str(value)])[0]
         except ValueError:
             # Use most common class if value not seen during training
+            print(f"⚠️ Unknown value '{value}' for feature '{feature}', using fallback")
+            # Get the most common class (first class in encoder)
             encoded_value = 0
-        
+
         encoded_features.append(encoded_value)
-    
+
     # Create feature array
     X = np.array([encoded_features])
-    
+
     # Scale features
     X_scaled = scaler.transform(X)
-    
+
     # Predict
     prediction = model.predict(X_scaled)[0]
     probabilities = model.predict_proba(X_scaled)[0]
-    
+
     # Decode prediction
     predicted_status = target_encoder.inverse_transform([prediction])[0]
-    
+
     # Get probability for each class
     class_probabilities = {
         target_encoder.classes_[i]: float(probabilities[i])
         for i in range(len(target_encoder.classes_))
     }
-    
+
     # Calculate risk level based on probabilities
     risk_level = 'Low'
     if class_probabilities.get('D', 0) > 0.3:
@@ -79,7 +116,11 @@ def predict_patient_risk(patient_data):
         risk_level = 'Medium'
     elif class_probabilities.get('NED', 0) < 0.6:
         risk_level = 'Medium'
-    
+
+    # Debug logging
+    print(f"🔍 Prediction for patient: Age={patient_data.get('age')}, Grade={grade}, Treatment={treatment}")
+    print(f"   Result: {predicted_status} ({max(probabilities)*100:.1f}% confidence)")
+
     return {
         'predicted_status': predicted_status,
         'confidence': float(max(probabilities)) * 100,

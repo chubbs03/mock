@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 Train ML model on Hugging Face patient dataset for risk prediction
+FIXED VERSION - Properly extracts diverse features and ensures model learns patterns
 """
 import json
 import numpy as np
 import pandas as pd
 from datasets import load_dataset
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
@@ -14,7 +15,7 @@ import joblib
 import re
 
 print("="*60)
-print("🤖 TRAINING ML MODEL ON PATIENT DATASET")
+print("🤖 TRAINING ML MODEL ON PATIENT DATASET (FIXED)")
 print("="*60)
 
 # Load dataset
@@ -27,25 +28,25 @@ print(f"✅ Loaded {len(data)} patient records")
 print("\n🔍 Extracting features from patient data...")
 
 def parse_patient_features(conversation_text):
-    """Extract features for ML training"""
+    """Extract features for ML training - FIXED to handle all variations"""
     features = {}
-    
+
     # Extract basic info
-    age_match = re.search(r'Age: (\d+)', conversation_text)
-    sex_match = re.search(r'Sex: (Male|Female)', conversation_text)
-    grade_match = re.search(r'grade=(\w+)', conversation_text)
+    age_match = re.search(r'Age:\s*(\d+)', conversation_text)
+    sex_match = re.search(r'Sex:\s*(Male|Female)', conversation_text)
+    grade_match = re.search(r'grade=([^,\n]+)', conversation_text)
     status_match = re.search(r'status=(\w+)', conversation_text)
-    
+
     # Extract tumor characteristics
     size_match = re.search(r'size=(\d+)', conversation_text)
     depth_match = re.search(r'depth=(\w+)', conversation_text)
-    site_match = re.search(r'site of primary STS=(.+?),', conversation_text)
-    histological_match = re.search(r'histological type=(.+?),', conversation_text)
-    mskcc_match = re.search(r'MSKCC type=(.+?),', conversation_text)
-    
+    site_match = re.search(r'site of primary STS=([^,\n]+)', conversation_text)
+    histological_match = re.search(r'histological type=([^,\n]+)', conversation_text)
+    mskcc_match = re.search(r'MSKCC type=([^,\n]+)', conversation_text)
+
     # Extract treatment info
-    treatment_match = re.search(r'Treatment: (.+?)\n', conversation_text)
-    
+    treatment_match = re.search(r'Treatment:\s*([^\n]+)', conversation_text)
+
     if age_match and sex_match and status_match:
         features['age'] = int(age_match.group(1))
         features['sex'] = sex_match.group(1)
@@ -82,6 +83,12 @@ print("\n📈 Target Distribution (Status):")
 print(df['status'].value_counts())
 print(f"\n📈 Tumor Grade Distribution:")
 print(df['grade'].value_counts())
+print(f"\n📈 Treatment Distribution:")
+print(df['treatment'].value_counts())
+print(f"\n📈 MSKCC Type Distribution:")
+print(df['mskcc_type'].value_counts())
+print(f"\n📈 Age Statistics:")
+print(f"  Min: {df['age'].min()}, Max: {df['age'].max()}, Mean: {df['age'].mean():.1f}")
 
 # Encode categorical variables
 print("\n🔧 Encoding categorical variables...")
@@ -119,14 +126,17 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# Train Random Forest model
+# Train Random Forest model with better parameters for small dataset
 print("\n🌲 Training Random Forest Classifier...")
 rf_model = RandomForestClassifier(
-    n_estimators=100,
-    max_depth=10,
-    min_samples_split=5,
+    n_estimators=200,  # More trees for better generalization
+    max_depth=None,    # Allow trees to grow fully
+    min_samples_split=2,  # More sensitive to patterns
+    min_samples_leaf=1,   # More sensitive to patterns
+    max_features='sqrt',  # Use sqrt of features at each split
     random_state=42,
-    class_weight='balanced'
+    class_weight='balanced',  # Handle class imbalance
+    bootstrap=True
 )
 rf_model.fit(X_train_scaled, y_train)
 print("✅ Random Forest training complete!")
@@ -134,9 +144,10 @@ print("✅ Random Forest training complete!")
 # Train Gradient Boosting model
 print("\n🚀 Training Gradient Boosting Classifier...")
 gb_model = GradientBoostingClassifier(
-    n_estimators=100,
-    max_depth=5,
-    learning_rate=0.1,
+    n_estimators=200,
+    max_depth=4,
+    learning_rate=0.05,  # Lower learning rate for better generalization
+    subsample=0.8,       # Use 80% of samples for each tree
     random_state=42
 )
 gb_model.fit(X_train_scaled, y_train)
@@ -160,6 +171,18 @@ gb_accuracy = accuracy_score(y_test, gb_pred)
 print(f"Accuracy: {gb_accuracy:.2%}")
 print("\nClassification Report:")
 print(classification_report(y_test, gb_pred, target_names=target_encoder.classes_))
+
+# Cross-validation scores
+print("\n" + "="*60)
+print("🔄 CROSS-VALIDATION SCORES (5-Fold)")
+print("="*60)
+rf_cv_scores = cross_val_score(rf_model, X_train_scaled, y_train, cv=5)
+print(f"Random Forest CV Scores: {rf_cv_scores}")
+print(f"Random Forest CV Mean: {rf_cv_scores.mean():.2%} (+/- {rf_cv_scores.std() * 2:.2%})")
+
+gb_cv_scores = cross_val_score(gb_model, X_train_scaled, y_train, cv=5)
+print(f"Gradient Boosting CV Scores: {gb_cv_scores}")
+print(f"Gradient Boosting CV Mean: {gb_cv_scores.mean():.2%} (+/- {gb_cv_scores.std() * 2:.2%})")
 
 # Feature importance
 print("\n" + "="*60)
@@ -216,6 +239,79 @@ print("✅ Saved: target_encoder.pkl")
 print("✅ Saved: label_encoders.pkl")
 print("✅ Saved: feature_names.json")
 print("✅ Saved: model_metadata.json")
+
+print("\n" + "="*60)
+print("🧪 TESTING MODEL WITH DIVERSE PATIENTS")
+print("="*60)
+
+# Test with different patient profiles to verify diversity
+test_patients = [
+    {
+        'name': 'Young Low-Risk Patient',
+        'age': 30,
+        'sex': 'Female',
+        'grade': 'Low',
+        'tumor_size': 2,
+        'depth': 'Superficial',
+        'site': 'arm',
+        'histological_type': 'well-differentiated',
+        'mskcc_type': 'Leiomyosarcoma',
+        'treatment': 'Surgery'
+    },
+    {
+        'name': 'High-Risk Patient',
+        'age': 70,
+        'sex': 'Male',
+        'grade': 'High',
+        'tumor_size': 15,
+        'depth': 'Deep',
+        'site': 'thigh',
+        'histological_type': 'pleiomorphic leiomyosarcoma',
+        'mskcc_type': 'MFH',
+        'treatment': 'Surgery + Chemotherapy'
+    },
+    {
+        'name': 'Medium-Risk Patient',
+        'age': 55,
+        'sex': 'Female',
+        'grade': 'Intermediate',
+        'tumor_size': 7,
+        'depth': 'Deep',
+        'site': 'abdomen',
+        'histological_type': 'leiomyosarcoma',
+        'mskcc_type': 'Leiomyosarcoma',
+        'treatment': 'Radiotherapy + Surgery'
+    }
+]
+
+for test_patient in test_patients:
+    # Encode features
+    encoded_features = []
+    encoded_features.append(test_patient['age'])
+    encoded_features.append(test_patient['tumor_size'])
+
+    for feature in categorical_features:
+        value = test_patient[feature]
+        encoder = label_encoders[feature]
+        try:
+            encoded_value = encoder.transform([str(value)])[0]
+        except ValueError:
+            encoded_value = 0
+        encoded_features.append(encoded_value)
+
+    # Predict
+    X_test_patient = scaler.transform([encoded_features])
+    prediction = best_model.predict(X_test_patient)[0]
+    probabilities = best_model.predict_proba(X_test_patient)[0]
+    predicted_status = target_encoder.inverse_transform([prediction])[0]
+
+    print(f"\n{test_patient['name']}:")
+    print(f"  Age: {test_patient['age']}, Grade: {test_patient['grade']}, Size: {test_patient['tumor_size']}cm")
+    print(f"  Predicted: {predicted_status} ({max(probabilities)*100:.1f}% confidence)")
+    print(f"  Probabilities: ", end="")
+    for i, cls in enumerate(target_encoder.classes_):
+        print(f"{cls}={probabilities[i]*100:.1f}% ", end="")
+    print()
 
 print("\n" + "="*60)
 print("🎉 MODEL TRAINING COMPLETE!")
