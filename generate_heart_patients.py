@@ -121,7 +121,24 @@ for idx, row in df.iterrows():
     chest_pain = get_chest_pain_type(row['cp'])
     risk_category = get_risk_category(row['target'], age, row['chol'], row['trestbps'])
     
-    # Create diagnosis object
+    # Helper function to handle missing values
+    def safe_int(value, default=0):
+        try:
+            if str(value) == '?' or str(value) == 'nan':
+                return default
+            return int(float(str(value)))
+        except:
+            return default
+
+    def safe_float(value, default=0.0):
+        try:
+            if str(value) == '?' or str(value) == 'nan':
+                return default
+            return float(value)
+        except:
+            return default
+
+    # Create diagnosis object with ALL 13 ML features
     diagnosis = {
         "condition": "Heart Disease" if row['target'] == 1 else "No Heart Disease",
         "chest_pain_type": chest_pain,
@@ -131,7 +148,13 @@ for idx, row in df.iterrows():
         "max_heart_rate": int(row['thalach']),
         "exercise_angina": "Yes" if row['exang'] == 1.0 else "No",
         "risk_category": risk_category,
-        "target": int(row['target'])
+        "target": int(row['target']),
+        # Additional ML features (critical for accurate predictions)
+        "restecg": int(row['restecg']),  # Resting ECG results (0-2)
+        "oldpeak": safe_float(row['oldpeak'], 0.0),  # ST depression induced by exercise
+        "slope": safe_int(row['slope'], 2),  # Slope of peak exercise ST segment (1-3)
+        "ca": safe_int(row['ca'], 0),  # Number of major vessels (0-3)
+        "thal": safe_int(row['thal'], 3)  # Thalassemia (3=normal, 6=fixed, 7=reversible)
     }
 
     # Create tags
