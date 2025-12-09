@@ -1,0 +1,40 @@
+{
+  "model_type": "Random Forest",
+  "accuracy": 0.9180327868852459,
+  "features": [
+    "age",
+    "sex",
+    "cp",
+    "trestbps",
+    "chol",
+    "fbs",
+    "restecg",
+    "thalach",
+    "exang",
+    "oldpeak",
+    "slope",
+    "ca",
+    "thal"
+  ],
+  "target_classes": [
+    "No Disease",
+    "Heart Disease"
+  ],
+  "training_samples": 242,
+  "test_samples": 61,
+  "feature_importance": {
+    "age": 0.09629537824539072,
+    "sex": 0.039805252402099665,
+    "cp": 0.11480795038545086,
+    "trestbps": 0.07840044924397936,
+    "chol": 0.08478464809450047,
+    "fbs": 0.010988964610420088,
+    "restecg": 0.02154455176210863,
+    "thalach": 0.12168664876812688,
+    "exang": 0.05294911462861504,
+    "oldpeak": 0.08919560171957283,
+    "slope": 0.04201063353692361,
+    "ca": 0.10665329955629126,
+    "thal": 0.1408775070465207
+  }
+}
