@@ -128,8 +128,24 @@ def predict_heart_disease(patient_data):
     predicted_status = 'Heart Disease' if prediction == 1 else 'No Disease'
     
     # Debug logging
-    print(f"🔍 Prediction for patient: Age={patient_data.get('age')}, Sex={sex}, BP={patient_data.get('trestbps', patient_data.get('resting_bp'))}")
-    print(f"   Result: {predicted_status} ({max(probabilities)*100:.1f}% confidence)")
+    print(f"\n{'='*60}")
+    print(f"🔍 NEW PREDICTION REQUEST")
+    print(f"{'='*60}")
+    print(f"📊 Patient Data:")
+    print(f"   Age: {patient_data.get('age')}, Sex: {'Male' if sex == 1 else 'Female'}")
+    print(f"   BP: {patient_data.get('trestbps', patient_data.get('resting_bp'))}, Cholesterol: {patient_data.get('chol')}")
+    print(f"   Chest Pain Type: {patient_data.get('cp')}, Max Heart Rate: {patient_data.get('thalach')}")
+    print(f"\n🤖 Model: {metadata['model_type']}")
+    print(f"🎯 Accuracy: {metadata['accuracy']:.2%}")
+    print(f"🌲 Estimators: 200 trees")
+    print(f"\n📈 PREDICTION RESULT:")
+    print(f"   Status: {predicted_status}")
+    print(f"   Confidence: {max(probabilities)*100:.1f}%")
+    print(f"   Risk Level: {risk_level}")
+    print(f"   Probabilities:")
+    print(f"      - No Disease: {no_disease_prob*100:.1f}%")
+    print(f"      - Heart Disease: {heart_disease_prob*100:.1f}%")
+    print(f"{'='*60}\n")
     
     return {
         'predicted_status': predicted_status,
@@ -153,7 +169,15 @@ def predict():
 
         return jsonify({
             'success': True,
-            'prediction': result
+            'prediction': result,
+            'model_info': {
+                'model_type': metadata['model_type'],
+                'accuracy': metadata['accuracy'],
+                'training_samples': metadata['training_samples'],
+                'test_samples': metadata['test_samples'],
+                'n_estimators': 200,  # Random Forest parameter
+                'total_features': len(metadata['features'])
+            }
         })
 
     except Exception as e:

@@ -30527,10 +30527,27 @@ export default function App(){
   const [mlEnabled, setMlEnabled] = useState(false)
   const [mlLoading, setMlLoading] = useState(false)
   const [taskPriority, setTaskPriority] = useState('Normal')
+  const [modelInfo, setModelInfo] = useState<any>(null)
 
   const filtered = useMemo(()=>patients.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.id.toLowerCase().includes(query.toLowerCase())), [query, patients])
   const patient = useMemo(()=>patients.find(p => p.id === selectedId)!, [patients, selectedId])
   const risk = useMemo(()=> computeRisk(patient), [patient])
+
+  // Sort tasks by priority: High > Medium > Normal > Low
+  const sortedTasks = useMemo(() => {
+    const priorityOrder: {[key: string]: number} = {
+      'High': 1,
+      'Medium': 2,
+      'Moderate': 2,
+      'Normal': 3,
+      'Low': 4
+    }
+    return [...tasks].sort((a, b) => {
+      const priorityA = priorityOrder[a.priority] || 3
+      const priorityB = priorityOrder[b.priority] || 3
+      return priorityA - priorityB
+    })
+  }, [tasks])
 
   /**
    * Add a new task - simplified without department routing
@@ -30583,7 +30600,12 @@ export default function App(){
         setPatients(updatedPatients)
         setMlEnabled(true)
 
-        const mlMsg = `ML Prediction: ${data.prediction.predicted_status} (${data.prediction.confidence.toFixed(1)}% confidence). Risk Level: ${data.prediction.risk_level}. Probabilities - No Disease: ${(data.prediction.probabilities['No Disease'] * 100).toFixed(1)}%, Heart Disease: ${(data.prediction.probabilities['Heart Disease'] * 100).toFixed(1)}%`
+        // Store model info
+        if (data.model_info) {
+          setModelInfo(data.model_info)
+        }
+
+        const mlMsg = `ML Prediction: ${data.prediction.predicted_status} (${data.prediction.confidence.toFixed(1)}% confidence). Risk Level: ${data.prediction.risk_level}. Model: ${data.model_info?.model_type || 'Random Forest'} (Accuracy: ${((data.model_info?.accuracy || 0.918) * 100).toFixed(2)}%). Probabilities - No Disease: ${(data.prediction.probabilities['No Disease'] * 100).toFixed(1)}%, Heart Disease: ${(data.prediction.probabilities['Heart Disease'] * 100).toFixed(1)}%`
         setChat(c => [...c, { role: 'assistant', text: mlMsg }])
       }
     } catch (error) {
@@ -30792,6 +30814,45 @@ return (
                   </Button>
                   <div className="text-xs text-slate-500 w-full">(ML uses trained Random Forest model)</div>
                 </div>
+
+                {/* Model Performance Info */}
+                {modelInfo && (
+                  <div className="mt-3 p-3 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Brain className="h-4 w-4 text-purple-600" />
+                      <div className="text-xs font-semibold text-purple-900">Model Performance</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                        <div className="text-purple-600 font-medium">Model Type</div>
+                        <div className="text-purple-900 font-semibold">{modelInfo.model_type}</div>
+                      </div>
+                      <div className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                        <div className="text-purple-600 font-medium">Accuracy</div>
+                        <div className="text-purple-900 font-semibold">{(modelInfo.accuracy * 100).toFixed(2)}%</div>
+                      </div>
+                      <div className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                        <div className="text-purple-600 font-medium">Trees (Estimators)</div>
+                        <div className="text-purple-900 font-semibold">{modelInfo.n_estimators}</div>
+                      </div>
+                      <div className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                        <div className="text-purple-600 font-medium">Training Samples</div>
+                        <div className="text-purple-900 font-semibold">{modelInfo.training_samples}</div>
+                      </div>
+                      <div className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                        <div className="text-purple-600 font-medium">Test Samples</div>
+                        <div className="text-purple-900 font-semibold">{modelInfo.test_samples}</div>
+                      </div>
+                      <div className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                        <div className="text-purple-600 font-medium">Features Used</div>
+                        <div className="text-purple-900 font-semibold">{modelInfo.total_features}</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-purple-700 bg-white/40 rounded-lg p-2 border border-purple-100">
+                      ✨ This prediction was made using a trained Random Forest model with {modelInfo.n_estimators} decision trees
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -30864,9 +30925,10 @@ return (
                   <Select defaultValue={taskPriority} onValueChange={setTaskPriority}>
                     <SelectTrigger className="flex-1"><SelectValue placeholder="Priority"/></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="High">High</SelectItem>
-                      <SelectItem value="Normal">Normal</SelectItem>
-                      <SelectItem value="Low">Low</SelectItem>
+                      <SelectItem value="High">🔴 High</SelectItem>
+                      <SelectItem value="Medium">🟡 Medium</SelectItem>
+                      <SelectItem value="Normal">🔵 Normal</SelectItem>
+                      <SelectItem value="Low">🟢 Low</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button onClick={()=>{
@@ -30880,20 +30942,38 @@ return (
                 </div>
               </div>
 
+              {/* Task List Header */}
+              <div className="flex items-center justify-between text-xs text-slate-500 px-1 mb-1">
+                <span>📋 {sortedTasks.length} task{sortedTasks.length !== 1 ? 's' : ''}</span>
+                <span>Sorted by priority ↓</span>
+              </div>
+
               {/* Task List */}
               <div className="space-y-2 max-h-[32vh] overflow-auto pr-1">
-                {tasks.map((t:any) => (
-                  <div key={t.id} className="flex items-start justify-between p-3 rounded-2xl border bg-white">
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">{t.text}</div>
-                      <div className="text-xs text-slate-500 mt-1">{t.id}</div>
+                {sortedTasks.map((t:any) => {
+                  // Priority color coding
+                  const priorityColor = t.priority === 'High' ? 'bg-red-50 border-red-200' :
+                                       t.priority === 'Medium' || t.priority === 'Moderate' ? 'bg-amber-50 border-amber-200' :
+                                       t.priority === 'Low' ? 'bg-green-50 border-green-200' :
+                                       'bg-blue-50 border-blue-200'
+                  const badgeColor = t.priority === 'High' ? 'bg-red-100 text-red-700 border-red-300' :
+                                    t.priority === 'Medium' || t.priority === 'Moderate' ? 'bg-amber-100 text-amber-700 border-amber-300' :
+                                    t.priority === 'Low' ? 'bg-green-100 text-green-700 border-green-300' :
+                                    'bg-blue-100 text-blue-700 border-blue-300'
+
+                  return (
+                    <div key={t.id} className={`flex items-start justify-between p-3 rounded-2xl border ${priorityColor}`}>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">{t.text}</div>
+                        <div className="text-xs text-slate-500 mt-1">{t.id}</div>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        <Badge className={`rounded-full ${badgeColor}`}>{t.priority}</Badge>
+                        <Button size="icon" variant="ghost" onClick={()=>setTasks((ts:any[])=>ts.filter(x=>x.id!==t.id))}><Trash2 className="h-4 w-4"/></Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-2">
-                      <Badge variant="outline" className="rounded-full">{t.priority}</Badge>
-                      <Button size="icon" variant="ghost" onClick={()=>setTasks((ts:any[])=>ts.filter(x=>x.id!==t.id))}><Trash2 className="h-4 w-4"/></Button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
                 {tasks.length === 0 && (
                   <div className="text-center text-sm text-slate-400 py-4">
                     No tasks yet
