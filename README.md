@@ -1,323 +1,166 @@
-# Predictive Healthcare Workflow System with Department Routing
+# Predictive AI Clinic Assistant — Heart Disease Prediction System
 
-A comprehensive healthcare workflow management system with AI-powered department routing, patient risk prediction, and intelligent task management.
+A full-stack healthcare application that combines multiple machine learning techniques for heart disease prediction, including Random Forest, Gradient Boosting, Artificial Neural Networks, Genetic Algorithm feature selection, and Fuzzy Logic risk classification.
 
-## 🌟 Features
+## Features
 
-### Core Features
-- **Patient Management** - Track multiple patients with vitals and medical history
-- **Risk Prediction** - AI-powered risk assessment based on patient data
-- **Task Queue** - Intelligent task management with priority levels
-- **Helper Bot** - DeepSeek AI-powered medical assistant for queries
+- **303 Patient Records** — Real data from the UCI Heart Disease dataset (Hugging Face)
+- **6 ML Models** — Random Forest, Gradient Boosting, ANN, RF+GA, ANN+GA, and a best-model selector
+- **Fuzzy Logic** — Intelligent risk classification using scikit-fuzzy with 24 rules
+- **Genetic Algorithm** — Feature selection using DEAP for optimized model inputs
+- **AUC-ROC Visualization** — Multi-model comparison plot
+- **Interactive Dashboard** — Vitals charts (BP, HR, Glucose, SpO2), risk assessment, task queue
+- **AI Helper Bot** — DeepSeek-powered conversational assistant
+- **Department Routing** — Rule-based + AI fallback for task classification
 
-### 🆕 Department Routing Module
-- **Automatic Department Classification** - Routes tasks to appropriate departments
-- **Two-Layer AI System** - Rule-based + DeepSeek AI fallback
-- **Confidence-Based Routing** - Auto-routes high-confidence tasks, triages uncertain ones
-- **Visual Department Chips** - Color-coded confidence indicators
-- **Department Filtering** - Filter tasks by department or triage status
+## Prerequisites
 
-## 🏗️ Architecture
+- **Python 3.10+**
+- **Node.js 18+** and npm
+- Python packages: `flask`, `flask-cors`, `joblib`, `numpy`, `scikit-learn`, `scikit-fuzzy`, `deap`, `networkx`, `matplotlib`, `pandas`, `datasets`, `openai`
 
-### Frontend (React + TypeScript + Vite)
-- Modern React 18 with TypeScript
-- Tailwind CSS for styling
-- shadcn/ui components
-- Recharts for data visualization
-- Real-time patient vitals tracking
+## Quick Start
 
-### Backend (Flask + Python)
-- RESTful API for department routing
-- Two-layer classification system
-- DeepSeek AI integration
-- CORS-enabled for frontend communication
+You need **3 terminals** to run the full system:
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+ and npm
-- Python 3.8+
-- DeepSeek API key (already configured)
-
-### 1. Start the Backend
+### Terminal 1 — ML API Server (port 5002)
 
 ```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python3 app.py
+pip install flask flask-cors joblib numpy scikit-learn scikit-fuzzy deap networkx
+python heart_disease_api.py
 ```
 
-Backend will start on `http://localhost:5001`
+This serves all ML models and the fuzzy logic risk assessment.
 
-**Note:** Port 5001 is used instead of 5000 to avoid conflicts with macOS AirPlay Receiver.
-
-### 2. Start the Frontend
+### Terminal 2 — Backend Server (port 5001)
 
 ```bash
-npm install  # If not already installed
+pip install flask flask-cors openai
+python backend/app.py
+```
+
+This handles department routing with DeepSeek AI.
+
+### Terminal 3 — Frontend Dev Server (port 5173)
+
+```bash
+npm install
 npm run dev
 ```
 
-Frontend will start on `http://localhost:5173` (or similar)
+### Open in Browser
 
-### 3. Open in Browser
+Navigate to **http://localhost:5173**
 
-Navigate to the URL shown by Vite (usually `http://localhost:5173`)
+## API Endpoints
 
-## 📖 Documentation
+### ML API (port 5002)
 
-### Quick References
-- **[QUICK_START.md](QUICK_START.md)** - Get started in 3 steps
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Complete implementation overview
-- **[DEPARTMENT_ROUTING_GUIDE.md](DEPARTMENT_ROUTING_GUIDE.md)** - Detailed routing documentation
-- **[backend/README.md](backend/README.md)** - Backend API documentation
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/predict` | Predict using the best model |
+| `POST` | `/api/predict-all` | Predict using all 7 models (6 ML + fuzzy) |
+| `POST` | `/api/fuzzy-risk` | Fuzzy logic risk assessment only |
+| `GET` | `/api/model-info` | Model metadata, GA features, fuzzy config |
+| `GET` | `/api/health` | Health check with loaded models list |
 
-## 🎯 Department Routing
+### Backend (port 5001)
 
-### How It Works
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/route` | Department routing for tasks |
+| `GET` | `/api/health` | Health check |
 
-1. **User adds a task** (e.g., "Order HbA1c test")
-2. **System analyzes text** using two-layer classification:
-   - **Layer 1**: Rule-based keyword matching (fast)
-   - **Layer 2**: DeepSeek AI (for ambiguous cases)
-3. **Confidence check**: 
-   - ≥80% → Auto-route to department (green chip)
-   - <80% → Send to triage (amber chip)
-4. **Task displayed** with department badge and confidence
+## Model Performance
 
-### Supported Departments
+| Model | AUC | Accuracy |
+|-------|-----|----------|
+| Random Forest | 0.9540 | 91.80% |
+| Gradient Boosting | 0.9470 | 88.52% |
+| RF + GA Features | 0.9416 | 83.61% |
+| ANN (Neural Network) | 0.9361 | 86.89% |
+| ANN + GA Features | 0.9361 | 77.05% |
 
-| Department | Keywords |
-|------------|----------|
-| **Reception** 🆕 | **appointment, booking, reschedule, change date, cancel** |
-| **Cardiology** | heart, cardiac, blood pressure, chest pain, arrhythmia |
-| **Endocrinology** | diabetes, glucose, insulin, HbA1c, thyroid |
-| **Dermatology** | skin, rash, eczema, psoriasis, acne |
-| **Pediatrics** | child, infant, vaccination, pediatric |
-| **Admin/Billing** | bill, payment, insurance, financial matters |
-| **General** | Fallback for unclear cases |
+## Retraining Models
 
-### Example Routing
-
-```
-Input: "Order HbA1c test for diabetes patient"
-→ Department: Endocrinology
-→ Confidence: 85%
-→ Auto-routed: ✅ Yes
-→ Display: Green chip "Endocrinology 85%"
-```
-
-```
-Input: "Patient feels unwell"
-→ Department: General
-→ Confidence: 60%
-→ Auto-routed: ❌ No
-→ Display: Amber chip "General 60%" ⚠ Needs Review
-```
-
-## 🎨 User Interface
-
-### Main Dashboard
-- **Patient List** - Search and select patients
-- **Vitals Charts** - Blood pressure, heart rate, glucose trends
-- **Risk Assessment** - AI-predicted risk level with confidence
-- **Task Queue** - Department-filtered task management
-- **Helper Bot** - AI chat assistant
-
-### Task Queue Features
-- **Department Tabs** - Filter by All, Triage, or specific department
-- **Color-Coded Chips** - Green (auto-routed) or Amber (needs review)
-- **Confidence Display** - Shows routing confidence percentage
-- **Priority Badges** - High, Normal, Low priority indicators
-
-## 🧪 Testing
-
-### Test Department Routing
-
-Try these examples in the Task Queue:
-
-**High-Confidence (Auto-routed):**
-- "Book appointment for next week" → Reception 🆕
-- "Reschedule my appointment" → Reception 🆕
-- "Change appointment date" → Reception 🆕
-- "Order HbA1c test" → Endocrinology
-- "Check blood pressure" → Cardiology
-- "Skin rash treatment" → Dermatology
-- "Child vaccination" → Pediatrics
-- "Insurance payment" → Admin/Billing
-
-**Low-Confidence (Needs Triage):**
-- "Patient feels tired" → General (triage)
-- "Follow up needed" → General (triage)
-
-### Automated Testing
+To retrain all models from scratch:
 
 ```bash
-cd backend
-source venv/bin/activate
-python test_routing.py
+# 1. Train base models (Random Forest, Gradient Boosting, ANN)
+pip install datasets scikit-learn pandas numpy joblib
+python train_heart_disease_model.py
+
+# 2. Run Genetic Algorithm feature selection and train GA-optimized models
+pip install deap networkx
+python genetic_feature_selection.py
+
+# 3. Generate fuzzy logic config
+pip install scikit-fuzzy
+python fuzzy_risk_classifier.py
+
+# 4. Regenerate AUC-ROC comparison plot
+pip install matplotlib
+python plot_auc_roc.py
 ```
 
-## 🔧 Configuration
-
-### Confidence Threshold
-
-**Location:** `backend/app.py` line 215
-
-```python
-auto_routed = final_result['confidence'] >= 0.8
-```
-
-**Adjust threshold:**
-- `0.7` - More automation, slightly higher risk
-- `0.8` - Balanced (current, recommended)
-- `0.9` - Very conservative, more manual triage
-
-### Add New Department
-
-**1. Update backend rules** (`backend/app.py`):
-```python
-DEPARTMENT_RULES = {
-    'Neurology': {
-        'keywords': [r'\b(brain|neuro|seizure|migraine)\b'],
-        'confidence': 0.85
-    }
-}
-```
-
-**2. Update DeepSeek prompt** to include new department
-
-**3. Frontend automatically adapts!** No changes needed.
-
-## 📊 System Architecture
+## Project Structure
 
 ```
-┌─────────────┐
-│   User UI   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────────────────────┐
-│  Frontend (React + TypeScript)  │
-│  - Patient Management           │
-│  - Task Queue with Routing      │
-│  - Helper Bot Chat              │
-│  - Vitals Visualization         │
-└──────┬──────────────────────────┘
-       │
-       │ POST /api/route
-       ▼
-┌─────────────────────────────────┐
-│    Backend (Flask + Python)     │
-│  ┌───────────────────────────┐  │
-│  │  Rule-Based Classifier    │  │
-│  │  (Keyword Matching)       │  │
-│  └───────────┬───────────────┘  │
-│              │                   │
-│              ▼                   │
-│  ┌───────────────────────────┐  │
-│  │  DeepSeek AI Classifier   │  │
-│  │  (Ambiguous Cases)        │  │
-│  └───────────┬───────────────┘  │
-│              │                   │
-│              ▼                   │
-│  ┌───────────────────────────┐  │
-│  │  Confidence Threshold     │  │
-│  │  (0.8 = 80%)              │  │
-│  └───────────┬───────────────┘  │
-│              │                   │
-│              ▼                   │
-│  ┌───────────────────────────┐  │
-│  │  Return Routing Result    │  │
-│  └───────────────────────────┘  │
-└─────────────────────────────────┘
-```
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool and dev server
-- **Tailwind CSS** - Styling
-- **shadcn/ui** - Component library
-- **Recharts** - Data visualization
-- **Lucide React** - Icons
-- **OpenAI SDK** - DeepSeek integration
-
-### Backend
-- **Flask 3.0** - Web framework
-- **Flask-CORS** - Cross-origin support
-- **OpenAI SDK** - DeepSeek API client
-- **Python 3.8+** - Runtime
-
-## 📝 Code Structure
-
-```
-.
-├── src/
-│   ├── App.tsx              # Main application component
-│   ├── components/          # UI components
-│   └── main.tsx            # Entry point
+├── src/                          # Frontend (React + TypeScript)
+│   ├── App.tsx                   # Main app with 303 patients, charts, ML integration
+│   ├── main.tsx                  # Entry point
+│   ├── index.css                 # Tailwind CSS
+│   └── components/ui/            # UI components (card, tabs, button, etc.)
 ├── backend/
-│   ├── app.py              # Flask routing service
-│   ├── requirements.txt    # Python dependencies
-│   ├── test_routing.py     # Automated tests
-│   └── README.md           # Backend documentation
-├── QUICK_START.md          # Quick start guide
-├── DEPARTMENT_ROUTING_GUIDE.md  # Detailed routing docs
-├── IMPLEMENTATION_SUMMARY.md    # Implementation overview
-└── README.md               # This file
+│   ├── app.py                    # Department routing server (port 5001)
+│   └── requirements.txt          # Python dependencies
+├── heart_disease_api.py          # ML API server (port 5002)
+├── train_heart_disease_model.py  # Training script for RF, GB, ANN
+├── genetic_feature_selection.py  # GA feature selection with DEAP
+├── fuzzy_risk_classifier.py      # Fuzzy logic risk classifier
+├── plot_auc_roc.py               # AUC-ROC curve generator
+├── heart_disease_model.pkl       # Best trained model
+├── heart_disease_rf_model.pkl    # Random Forest model
+├── heart_disease_gb_model.pkl    # Gradient Boosting model
+├── heart_disease_ann_model.pkl   # ANN model
+├── heart_disease_rf_ga_model.pkl # RF with GA-selected features
+├── heart_disease_ann_ga_model.pkl# ANN with GA-selected features
+├── heart_disease_scaler.pkl      # Feature scaler
+├── heart_disease_metadata.json   # Model metadata
+├── heart_disease_features.json   # Feature names
+├── ga_selected_features.json     # GA-selected feature indices
+├── fuzzy_config.json             # Fuzzy logic configuration
+├── heart_disease_auc_roc_curve.png  # AUC-ROC plot (PNG)
+├── heart_disease_auc_roc_curve.pdf  # AUC-ROC plot (PDF)
+├── index.html                    # HTML entry point
+├── package.json                  # npm dependencies
+├── vite.config.ts                # Vite configuration
+└── tsconfig.json                 # TypeScript configuration
 ```
 
-## 🐛 Troubleshooting
+## Tech Stack
 
-### Backend won't start
-```bash
-cd backend
-source venv/bin/activate
-pip install -r requirements.txt
-python3 app.py
-```
+**Frontend:** React 18, TypeScript, Vite, Tailwind CSS v4, Recharts, Lucide React, OpenAI SDK (DeepSeek)
 
-### Frontend can't connect
-1. Ensure backend is running on port 5001
-2. Check browser console (F12) for errors
-3. Verify CORS is enabled in backend
+**ML API:** Flask, scikit-learn, scikit-fuzzy, DEAP, joblib, NumPy
 
-### Tasks not routing
-1. Check backend is running
-2. Open browser console (F12)
-3. Look for network errors
-4. Verify API endpoint URL in `App.tsx`
+**Backend:** Flask, OpenAI SDK (DeepSeek)
 
-## 📚 Learn More
+**Dataset:** UCI Heart Disease (303 records, 13 features) via Hugging Face
 
-- **DeepSeek API**: [https://platform.deepseek.com](https://platform.deepseek.com)
-- **Flask Documentation**: [https://flask.palletsprojects.com](https://flask.palletsprojects.com)
-- **React Documentation**: [https://react.dev](https://react.dev)
-- **Tailwind CSS**: [https://tailwindcss.com](https://tailwindcss.com)
+## Troubleshooting
 
-## 🎉 Features Summary
+### ML API won't start
+- Ensure all Python packages are installed: `pip install flask flask-cors joblib numpy scikit-learn scikit-fuzzy networkx`
+- Ensure all `.pkl` and `.json` model files exist in the root directory
+- If missing, retrain models (see "Retraining Models" above)
 
-✅ Patient management with vitals tracking  
-✅ AI-powered risk prediction  
-✅ Intelligent task queue  
-✅ DeepSeek AI helper bot  
-✅ **Automatic department routing**  
-✅ **Two-layer classification (rule-based + AI)**  
-✅ **Confidence-based auto-routing**  
-✅ **Visual department chips**  
-✅ **Department filtering tabs**  
-✅ **Triage queue for uncertain cases**  
+### Frontend shows blank page
+- Check browser console (F12) for errors
+- Ensure `npm install` was run
+- Try `npm run build` to check for TypeScript errors
 
-## 📄 License
-
-This is a demo/academic project for healthcare workflow management.
-
----
-
-**Built with ❤️ using React, Flask, and DeepSeek AI**
+### ML Predict button not working
+- Ensure the ML API is running on port 5002
+- Check `http://localhost:5002/api/health` returns `"status": "healthy"`
 
