@@ -8,6 +8,7 @@ import pandas as pd
 from datasets import load_dataset
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import joblib
@@ -102,6 +103,25 @@ gb_model = GradientBoostingClassifier(
 gb_model.fit(X_train_scaled, y_train)
 print("✅ Gradient Boosting training complete!")
 
+# Train ANN (Neural Network) model
+print("\n🧠 Training Artificial Neural Network (ANN)...")
+ann_model = MLPClassifier(
+    hidden_layer_sizes=(100, 50, 25),
+    activation='relu',
+    solver='adam',
+    max_iter=500,
+    random_state=42,
+    early_stopping=True,
+    validation_fraction=0.1,
+    n_iter_no_change=10,
+    verbose=False
+)
+ann_model.fit(X_train_scaled, y_train)
+print("✅ ANN training complete!")
+print(f"   Iterations: {ann_model.n_iter_}")
+print(f"   Layers: {ann_model.n_layers_}")
+print(f"   Hidden layers: {ann_model.hidden_layer_sizes}")
+
 # Evaluate models
 print("\n" + "="*60)
 print("📊 MODEL EVALUATION")
@@ -121,6 +141,13 @@ print(f"Accuracy: {gb_accuracy:.2%}")
 print("\nClassification Report:")
 print(classification_report(y_test, gb_pred, target_names=['No Disease', 'Heart Disease']))
 
+print("\n🧠 ARTIFICIAL NEURAL NETWORK RESULTS:")
+ann_pred = ann_model.predict(X_test_scaled)
+ann_accuracy = accuracy_score(y_test, ann_pred)
+print(f"Accuracy: {ann_accuracy:.2%}")
+print("\nClassification Report:")
+print(classification_report(y_test, ann_pred, target_names=['No Disease', 'Heart Disease']))
+
 # Cross-validation scores
 print("\n" + "="*60)
 print("🔄 CROSS-VALIDATION SCORES (5-Fold)")
@@ -132,6 +159,10 @@ print(f"Random Forest CV Mean: {rf_cv_scores.mean():.2%} (+/- {rf_cv_scores.std(
 gb_cv_scores = cross_val_score(gb_model, X_train_scaled, y_train, cv=5)
 print(f"Gradient Boosting CV Scores: {gb_cv_scores}")
 print(f"Gradient Boosting CV Mean: {gb_cv_scores.mean():.2%} (+/- {gb_cv_scores.std() * 2:.2%})")
+
+ann_cv_scores = cross_val_score(ann_model, X_train_scaled, y_train, cv=5)
+print(f"ANN CV Scores: {ann_cv_scores}")
+print(f"ANN CV Mean: {ann_cv_scores.mean():.2%} (+/- {ann_cv_scores.std() * 2:.2%})")
 
 # Feature importance
 print("\n" + "="*60)
@@ -149,14 +180,27 @@ print("💾 SAVING MODELS AND ENCODERS")
 print("="*60)
 
 # Choose best model
-best_model = rf_model if rf_accuracy >= gb_accuracy else gb_model
-best_model_name = "Random Forest" if rf_accuracy >= gb_accuracy else "Gradient Boosting"
-best_accuracy = max(rf_accuracy, gb_accuracy)
+model_scores = {
+    'Random Forest': rf_accuracy,
+    'Gradient Boosting': gb_accuracy,
+    'ANN (Neural Network)': ann_accuracy
+}
+best_model_name = max(model_scores, key=model_scores.get)
+best_accuracy = model_scores[best_model_name]
+best_model = {'Random Forest': rf_model, 'Gradient Boosting': gb_model, 'ANN (Neural Network)': ann_model}[best_model_name]
+
+print(f"\n📊 Model Comparison:")
+for name, acc in model_scores.items():
+    marker = "🏆" if name == best_model_name else "  "
+    print(f"   {marker} {name}: {acc:.2%}")
 
 print(f"\n🏆 Best Model: {best_model_name} (Accuracy: {best_accuracy:.2%})")
 
-# Save everything
+# Save all models
 joblib.dump(best_model, 'heart_disease_model.pkl')
+joblib.dump(rf_model, 'heart_disease_rf_model.pkl')
+joblib.dump(gb_model, 'heart_disease_gb_model.pkl')
+joblib.dump(ann_model, 'heart_disease_ann_model.pkl')
 joblib.dump(scaler, 'heart_disease_scaler.pkl')
 
 # Save feature names
@@ -167,6 +211,18 @@ with open('heart_disease_features.json', 'w') as f:
 metadata = {
     'model_type': best_model_name,
     'accuracy': float(best_accuracy),
+    'all_models': {
+        'Random Forest': float(rf_accuracy),
+        'Gradient Boosting': float(gb_accuracy),
+        'ANN (Neural Network)': float(ann_accuracy)
+    },
+    'ann_config': {
+        'hidden_layers': list(ann_model.hidden_layer_sizes),
+        'activation': 'relu',
+        'solver': 'adam',
+        'iterations': int(ann_model.n_iter_),
+        'n_layers': int(ann_model.n_layers_)
+    },
     'features': feature_columns,
     'target_classes': ['No Disease', 'Heart Disease'],
     'training_samples': len(X_train),
@@ -180,7 +236,10 @@ metadata = {
 with open('heart_disease_metadata.json', 'w') as f:
     json.dump(metadata, f, indent=2)
 
-print("✅ Saved: heart_disease_model.pkl")
+print("✅ Saved: heart_disease_model.pkl (best model)")
+print("✅ Saved: heart_disease_rf_model.pkl")
+print("✅ Saved: heart_disease_gb_model.pkl")
+print("✅ Saved: heart_disease_ann_model.pkl")
 print("✅ Saved: heart_disease_scaler.pkl")
 print("✅ Saved: heart_disease_features.json")
 print("✅ Saved: heart_disease_metadata.json")
@@ -229,12 +288,21 @@ print("\n" + "="*60)
 print("🎉 MODEL TRAINING COMPLETE!")
 print("="*60)
 print(f"\n📊 Summary:")
-print(f"   • Model: {best_model_name}")
-print(f"   • Accuracy: {best_accuracy:.2%}")
+print(f"   • Best Model: {best_model_name}")
+print(f"   • Best Accuracy: {best_accuracy:.2%}")
+print(f"   • Random Forest: {rf_accuracy:.2%}")
+print(f"   • Gradient Boosting: {gb_accuracy:.2%}")
+print(f"   • ANN (Neural Network): {ann_accuracy:.2%}")
 print(f"   • Training samples: {len(X_train)}")
 print(f"   • Test samples: {len(X_test)}")
 print(f"   • Features: {len(feature_columns)}")
 print(f"   • Target classes: 2 (No Disease, Heart Disease)")
+
+print(f"\n🧠 ANN Architecture:")
+print(f"   • Hidden layers: {ann_model.hidden_layer_sizes}")
+print(f"   • Activation: relu")
+print(f"   • Solver: adam")
+print(f"   • Iterations: {ann_model.n_iter_}")
 
 print(f"\n🎯 Top 5 Most Important Features:")
 for i in range(min(5, len(feature_importance))):

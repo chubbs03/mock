@@ -1,20 +1,36 @@
 #!/usr/bin/env python3
 """
-Flask API for heart disease prediction using trained ML model
+Flask API for heart disease prediction using trained ML models
+Supports: Random Forest, Gradient Boosting, ANN, GA-optimized models, and Fuzzy Logic
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
 import numpy as np
 import json
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# Load model and scaler
-print("📥 Loading heart disease ML model...")
+# Load models and scaler
+print("📥 Loading heart disease ML models...")
 model = joblib.load('heart_disease_model.pkl')
 scaler = joblib.load('heart_disease_scaler.pkl')
+
+# Load all available models
+models = {'best': model}
+model_files = {
+    'random_forest': 'heart_disease_rf_model.pkl',
+    'gradient_boosting': 'heart_disease_gb_model.pkl',
+    'ann': 'heart_disease_ann_model.pkl',
+    'rf_ga': 'heart_disease_rf_ga_model.pkl',
+    'ann_ga': 'heart_disease_ann_ga_model.pkl'
+}
+for name, path in model_files.items():
+    if os.path.exists(path):
+        models[name] = joblib.load(path)
+        print(f"   ✅ Loaded {name} model")
 
 # Load metadata
 with open('heart_disease_metadata.json', 'r') as f:
@@ -23,17 +39,47 @@ with open('heart_disease_metadata.json', 'r') as f:
 with open('heart_disease_features.json', 'r') as f:
     feature_names = json.load(f)
 
-print(f"✅ Loaded {metadata['model_type']} model (Accuracy: {metadata['accuracy']:.2%})")
+# Load GA feature selection results if available
+ga_features = None
+if os.path.exists('ga_selected_features.json'):
+    with open('ga_selected_features.json', 'r') as f:
+        ga_features = json.load(f)
+    print(f"   ✅ Loaded GA feature selection ({len(ga_features['selected_features'])} features)")
+
+# Load fuzzy config if available
+fuzzy_config = None
+if os.path.exists('fuzzy_config.json'):
+    with open('fuzzy_config.json', 'r') as f:
+        fuzzy_config = json.load(f)
+    print(f"   ✅ Loaded Fuzzy Logic config ({fuzzy_config['num_rules']} rules)")
+
+# Initialize fuzzy logic system
+fuzzy_system = None
+try:
+    import skfuzzy as fuzz
+    from skfuzzy import control as ctrl
+    from fuzzy_risk_classifier import classify_risk_fuzzy, risk_ctrl
+    fuzzy_system = True
+    print("   ✅ Fuzzy Logic system initialized")
+except ImportError:
+    print("   ⚠️  Fuzzy Logic not available (install scikit-fuzzy)")
+
+print(f"\n✅ Loaded {len(models)} models")
 
 print("\n" + "="*60)
-print("🫀 HEART DISEASE PREDICTION API")
+print("🫀 HEART DISEASE PREDICTION API (Enhanced)")
 print("="*60)
-print(f"📊 Model: {metadata['model_type']}")
+print(f"📊 Best Model: {metadata['model_type']}")
 print(f"🎯 Accuracy: {metadata['accuracy']:.2%}")
+print(f"🧠 Available Models: {', '.join(models.keys())}")
+print(f"🔮 Fuzzy Logic: {'✅ Active' if fuzzy_system else '❌ Not available'}")
+print(f"🧬 GA Features: {'✅ Active' if ga_features else '❌ Not available'}")
 print(f"📍 Endpoints:")
-print(f"   POST /api/predict - Predict heart disease risk")
-print(f"   GET  /api/model-info - Get model information")
-print(f"   GET  /api/health - Health check")
+print(f"   POST /api/predict       - Predict with best model")
+print(f"   POST /api/predict-all   - Predict with all models")
+print(f"   POST /api/fuzzy-risk    - Fuzzy logic risk assessment")
+print(f"   GET  /api/model-info    - Get model information")
+print(f"   GET  /api/health        - Health check")
 print("="*60)
 print("🚀 Starting server on http://localhost:5002")
 print("="*60)
@@ -189,13 +235,100 @@ def predict():
             'error': str(e)
         }), 500
 
+@app.route('/api/predict-all', methods=['POST'])
+def predict_all():
+    """Predict heart disease risk using ALL available models"""
+    try:
+        data = request.json
+        results = {}
+
+        # Extract features
+        features = _extract_features(data)
+        X = np.array([features])
+        X_scaled = scaler.transform(X)
+
+        # Predict with each model
+        for model_name, model_obj in models.items():
+            try:
+                if model_name in ('rf_ga', 'ann_ga') and ga_features:
+                    # Use GA-selected features
+                    X_ga = X_scaled[:, ga_features['selected_indices']]
+                    pred = model_obj.predict(X_ga)[0]
+                    proba = model_obj.predict_proba(X_ga)[0]
+                else:
+                    pred = model_obj.predict(X_scaled)[0]
+                    proba = model_obj.predict_proba(X_scaled)[0]
+
+                results[model_name] = {
+                    'predicted_status': 'Heart Disease' if pred == 1 else 'No Disease',
+                    'confidence': float(max(proba)) * 100,
+                    'probabilities': {
+                        'No Disease': float(proba[0]),
+                        'Heart Disease': float(proba[1])
+                    }
+                }
+            except Exception as e:
+                results[model_name] = {'error': str(e)}
+
+        # Add fuzzy logic result
+        if fuzzy_system:
+            try:
+                fuzzy_result = classify_risk_fuzzy(data)
+                results['fuzzy_logic'] = fuzzy_result
+            except Exception as e:
+                results['fuzzy_logic'] = {'error': str(e)}
+
+        return jsonify({
+            'success': True,
+            'predictions': results,
+            'models_used': list(results.keys())
+        })
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/fuzzy-risk', methods=['POST'])
+def fuzzy_risk():
+    """Assess heart disease risk using Fuzzy Logic"""
+    try:
+        data = request.json
+
+        if not fuzzy_system:
+            return jsonify({
+                'success': False,
+                'error': 'Fuzzy Logic system not available. Install scikit-fuzzy.'
+            }), 503
+
+        result = classify_risk_fuzzy(data)
+
+        return jsonify({
+            'success': True,
+            'fuzzy_assessment': result,
+            'system_info': fuzzy_config
+        })
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/model-info', methods=['GET'])
 def model_info():
-    """Get model information"""
-    return jsonify({
+    """Get model information including all models"""
+    info = {
         'success': True,
-        'model': metadata
-    })
+        'model': metadata,
+        'available_models': list(models.keys()),
+        'fuzzy_logic_available': fuzzy_system is not None,
+        'ga_features_available': ga_features is not None
+    }
+    if ga_features:
+        info['ga_selected_features'] = ga_features['selected_features']
+    if fuzzy_config:
+        info['fuzzy_config'] = fuzzy_config
+    return jsonify(info)
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -203,8 +336,40 @@ def health():
     return jsonify({
         'success': True,
         'status': 'healthy',
-        'model_loaded': True
+        'models_loaded': list(models.keys()),
+        'fuzzy_logic': fuzzy_system is not None,
+        'ga_features': ga_features is not None
     })
+
+
+def _extract_features(patient_data):
+    """Extract feature vector from patient data dict"""
+    features = []
+    features.append(patient_data.get('age', 50))
+    sex = patient_data.get('sex', patient_data.get('gender', 'M'))
+    features.append(1.0 if sex in ['M', 'Male', 1, 1.0] else 0.0)
+    features.append(float(patient_data.get('cp', 4)))
+    features.append(patient_data.get('trestbps', patient_data.get('resting_bp', 130)))
+    features.append(patient_data.get('chol', patient_data.get('cholesterol', 240)))
+    features.append(float(patient_data.get('fbs', 0)))
+    features.append(float(patient_data.get('restecg', 0)))
+    features.append(patient_data.get('thalach', patient_data.get('max_heart_rate', 150)))
+    exang = patient_data.get('exang', 0)
+    if patient_data.get('exercise_angina') == 'Yes':
+        exang = 1
+    features.append(float(exang))
+    features.append(patient_data.get('oldpeak', 0))
+    features.append(patient_data.get('slope', 2))
+    ca = patient_data.get('ca', 0)
+    if isinstance(ca, str):
+        ca = float(ca) if ca != '' else 0
+    features.append(float(ca))
+    thal = patient_data.get('thal', 3)
+    if isinstance(thal, str):
+        thal = float(thal) if thal != '' else 3
+    features.append(float(thal))
+    return features
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5002, debug=True)

@@ -1,6 +1,22 @@
 {
   "model_type": "Random Forest",
   "accuracy": 0.9180327868852459,
+  "all_models": {
+    "Random Forest": 0.9180327868852459,
+    "Gradient Boosting": 0.8852459016393442,
+    "ANN (Neural Network)": 0.8688524590163934
+  },
+  "ann_config": {
+    "hidden_layers": [
+      100,
+      50,
+      25
+    ],
+    "activation": "relu",
+    "solver": "adam",
+    "iterations": 20,
+    "n_layers": 5
+  },
   "features": [
     "age",
     "sex",

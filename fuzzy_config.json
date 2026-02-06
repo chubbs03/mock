@@ -1,0 +1,112 @@
+{
+  "system": "Fuzzy Logic Risk Classifier",
+  "input_variables": {
+    "age": {
+      "range": [
+        20,
+        89
+      ],
+      "sets": [
+        "young",
+        "middle",
+        "old"
+      ]
+    },
+    "blood_pressure": {
+      "range": [
+        80,
+        219
+      ],
+      "sets": [
+        "low",
+        "normal",
+        "high",
+        "very_high"
+      ]
+    },
+    "cholesterol": {
+      "range": [
+        100,
+        599
+      ],
+      "sets": [
+        "low",
+        "normal",
+        "high",
+        "very_high"
+      ]
+    },
+    "max_heart_rate": {
+      "range": [
+        60,
+        219
+      ],
+      "sets": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "st_depression": {
+      "range": [
+        0,
+        6.9
+      ],
+      "sets": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "chest_pain": {
+      "range": [
+        0,
+        4
+      ],
+      "sets": [
+        "typical_angina",
+        "atypical",
+        "non_anginal",
+        "asymptomatic"
+      ]
+    }
+  },
+  "output_variable": {
+    "risk": {
+      "range": [
+        0,
+        100
+      ],
+      "sets": [
+        "very_low",
+        "low",
+        "moderate",
+        "high",
+        "very_high"
+      ]
+    }
+  },
+  "num_rules": 24,
+  "risk_thresholds": {
+    "very_low": [
+      0,
+      20
+    ],
+    "low": [
+      20,
+      35
+    ],
+    "moderate": [
+      35,
+      55
+    ],
+    "high": [
+      55,
+      75
+    ],
+    "very_high": [
+      75,
+      100
+    ]
+  }
+}
