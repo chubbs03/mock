@@ -8,14 +8,9 @@ import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 
-print("="*60)
-print("🔮 FUZZY LOGIC RISK CLASSIFICATION SYSTEM")
-print("="*60)
-
 # ============================================================
 # Define Fuzzy Variables (Antecedents & Consequent)
 # ============================================================
-print("\n📐 Defining fuzzy variables and membership functions...")
 
 # --- Input Variables (Antecedents) ---
 
@@ -68,12 +63,9 @@ risk['moderate'] = fuzz.trimf(risk.universe, [30, 50, 70])
 risk['high'] = fuzz.trimf(risk.universe, [60, 75, 90])
 risk['very_high'] = fuzz.trimf(risk.universe, [80, 100, 100])
 
-print("✅ Fuzzy variables defined")
-
 # ============================================================
 # Define Fuzzy Rules
 # ============================================================
-print("📏 Defining fuzzy rules...")
 
 rules = []
 
@@ -109,15 +101,11 @@ rules.append(ctrl.Rule(age['young'] & cholesterol['high'] & st_depression['mediu
 rules.append(ctrl.Rule(age['old'] & blood_pressure['normal'] & max_heart_rate['high'], risk['low']))
 rules.append(ctrl.Rule(chest_pain['non_anginal'] & blood_pressure['normal'], risk['low']))
 
-print(f"✅ {len(rules)} fuzzy rules defined")
-
 # ============================================================
 # Create Fuzzy Control System
 # ============================================================
-print("\n⚙️ Building fuzzy control system...")
 risk_ctrl = ctrl.ControlSystem(rules)
 risk_simulator = ctrl.ControlSystemSimulation(risk_ctrl)
-print("✅ Fuzzy control system ready")
 
 # ============================================================
 # Fuzzy Risk Classification Function
@@ -178,83 +166,87 @@ def classify_risk_fuzzy(patient_data):
     }
 
 
-# ============================================================
-# Test with Sample Patients
-# ============================================================
-print("\n" + "="*60)
-print("🧪 TESTING FUZZY RISK CLASSIFICATION")
-print("="*60)
+if __name__ == '__main__':
+    # ============================================================
+    # Test with Sample Patients
+    # ============================================================
+    print("="*60)
+    print("🔮 FUZZY LOGIC RISK CLASSIFICATION SYSTEM")
+    print("="*60)
+    print("\n" + "="*60)
+    print("🧪 TESTING FUZZY RISK CLASSIFICATION")
+    print("="*60)
 
-test_patients = [
-    {
-        'name': 'Young Healthy Patient',
-        'age': 35, 'sex': 0, 'cp': 4, 'trestbps': 120, 'chol': 180,
-        'fbs': 0, 'restecg': 0, 'thalach': 170, 'exang': 0,
-        'oldpeak': 0, 'slope': 1, 'ca': 0, 'thal': 3
-    },
-    {
-        'name': 'High-Risk Elderly Patient',
-        'age': 65, 'sex': 1, 'cp': 1, 'trestbps': 160, 'chol': 300,
-        'fbs': 1, 'restecg': 2, 'thalach': 110, 'exang': 1,
-        'oldpeak': 3.5, 'slope': 3, 'ca': 3, 'thal': 7
-    },
-    {
-        'name': 'Moderate-Risk Patient',
-        'age': 50, 'sex': 0, 'cp': 2, 'trestbps': 140, 'chol': 240,
-        'fbs': 0, 'restecg': 1, 'thalach': 140, 'exang': 0,
-        'oldpeak': 1.5, 'slope': 2, 'ca': 1, 'thal': 3
-    },
-    {
-        'name': 'Very High-Risk Patient',
-        'age': 70, 'sex': 1, 'cp': 1, 'trestbps': 190, 'chol': 400,
-        'fbs': 1, 'restecg': 2, 'thalach': 90, 'exang': 1,
-        'oldpeak': 5.0, 'slope': 3, 'ca': 3, 'thal': 7
-    },
-    {
-        'name': 'Borderline Patient',
-        'age': 55, 'sex': 1, 'cp': 3, 'trestbps': 135, 'chol': 250,
-        'fbs': 0, 'restecg': 0, 'thalach': 145, 'exang': 0,
-        'oldpeak': 1.0, 'slope': 2, 'ca': 0, 'thal': 3
+    test_patients = [
+        {
+            'name': 'Young Healthy Patient',
+            'age': 35, 'sex': 0, 'cp': 4, 'trestbps': 120, 'chol': 180,
+            'fbs': 0, 'restecg': 0, 'thalach': 170, 'exang': 0,
+            'oldpeak': 0, 'slope': 1, 'ca': 0, 'thal': 3
+        },
+        {
+            'name': 'High-Risk Elderly Patient',
+            'age': 65, 'sex': 1, 'cp': 1, 'trestbps': 160, 'chol': 300,
+            'fbs': 1, 'restecg': 2, 'thalach': 110, 'exang': 1,
+            'oldpeak': 3.5, 'slope': 3, 'ca': 3, 'thal': 7
+        },
+        {
+            'name': 'Moderate-Risk Patient',
+            'age': 50, 'sex': 0, 'cp': 2, 'trestbps': 140, 'chol': 240,
+            'fbs': 0, 'restecg': 1, 'thalach': 140, 'exang': 0,
+            'oldpeak': 1.5, 'slope': 2, 'ca': 1, 'thal': 3
+        },
+        {
+            'name': 'Very High-Risk Patient',
+            'age': 70, 'sex': 1, 'cp': 1, 'trestbps': 190, 'chol': 400,
+            'fbs': 1, 'restecg': 2, 'thalach': 90, 'exang': 1,
+            'oldpeak': 5.0, 'slope': 3, 'ca': 3, 'thal': 7
+        },
+        {
+            'name': 'Borderline Patient',
+            'age': 55, 'sex': 1, 'cp': 3, 'trestbps': 135, 'chol': 250,
+            'fbs': 0, 'restecg': 0, 'thalach': 145, 'exang': 0,
+            'oldpeak': 1.0, 'slope': 2, 'ca': 0, 'thal': 3
+        }
+    ]
+
+    print(f"\n{'Patient':<30} {'Risk Score':>12} {'Level':>12} {'Category':>12}")
+    print("-" * 70)
+
+    for patient in test_patients:
+        result = classify_risk_fuzzy(patient)
+        print(f"{patient['name']:<30} {result['risk_score']:>10.1f}% {result['risk_level']:>12} {result['risk_category']:>12}")
+
+    # Save fuzzy system configuration
+    fuzzy_config = {
+        'system': 'Fuzzy Logic Risk Classifier',
+        'input_variables': {
+            'age': {'range': [20, 89], 'sets': ['young', 'middle', 'old']},
+            'blood_pressure': {'range': [80, 219], 'sets': ['low', 'normal', 'high', 'very_high']},
+            'cholesterol': {'range': [100, 599], 'sets': ['low', 'normal', 'high', 'very_high']},
+            'max_heart_rate': {'range': [60, 219], 'sets': ['low', 'medium', 'high']},
+            'st_depression': {'range': [0, 6.9], 'sets': ['low', 'medium', 'high']},
+            'chest_pain': {'range': [0, 4], 'sets': ['typical_angina', 'atypical', 'non_anginal', 'asymptomatic']}
+        },
+        'output_variable': {
+            'risk': {'range': [0, 100], 'sets': ['very_low', 'low', 'moderate', 'high', 'very_high']}
+        },
+        'num_rules': len(rules),
+        'risk_thresholds': {
+            'very_low': [0, 20],
+            'low': [20, 35],
+            'moderate': [35, 55],
+            'high': [55, 75],
+            'very_high': [75, 100]
+        }
     }
-]
 
-print(f"\n{'Patient':<30} {'Risk Score':>12} {'Level':>12} {'Category':>12}")
-print("-" * 70)
+    with open('fuzzy_config.json', 'w') as f:
+        json.dump(fuzzy_config, f, indent=2)
 
-for patient in test_patients:
-    result = classify_risk_fuzzy(patient)
-    print(f"{patient['name']:<30} {result['risk_score']:>10.1f}% {result['risk_level']:>12} {result['risk_category']:>12}")
+    print(f"\n✅ Saved: fuzzy_config.json")
 
-# Save fuzzy system configuration
-fuzzy_config = {
-    'system': 'Fuzzy Logic Risk Classifier',
-    'input_variables': {
-        'age': {'range': [20, 89], 'sets': ['young', 'middle', 'old']},
-        'blood_pressure': {'range': [80, 219], 'sets': ['low', 'normal', 'high', 'very_high']},
-        'cholesterol': {'range': [100, 599], 'sets': ['low', 'normal', 'high', 'very_high']},
-        'max_heart_rate': {'range': [60, 219], 'sets': ['low', 'medium', 'high']},
-        'st_depression': {'range': [0, 6.9], 'sets': ['low', 'medium', 'high']},
-        'chest_pain': {'range': [0, 4], 'sets': ['typical_angina', 'atypical', 'non_anginal', 'asymptomatic']}
-    },
-    'output_variable': {
-        'risk': {'range': [0, 100], 'sets': ['very_low', 'low', 'moderate', 'high', 'very_high']}
-    },
-    'num_rules': len(rules),
-    'risk_thresholds': {
-        'very_low': [0, 20],
-        'low': [20, 35],
-        'moderate': [35, 55],
-        'high': [55, 75],
-        'very_high': [75, 100]
-    }
-}
-
-with open('fuzzy_config.json', 'w') as f:
-    json.dump(fuzzy_config, f, indent=2)
-
-print(f"\n✅ Saved: fuzzy_config.json")
-
-print("\n" + "="*60)
-print("✨ Fuzzy Logic risk classification system ready!")
-print("="*60)
+    print("\n" + "="*60)
+    print("✨ Fuzzy Logic risk classification system ready!")
+    print("="*60)
 
